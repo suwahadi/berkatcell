@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('orders', function (Blueprint $table): void {
+            $table->string('shipping_courier_name')->nullable()->after('shipping_courier')
+                ->comment('Nama kurir dari API RajaOngkir, mis. JNE / J&T Express');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('orders', function (Blueprint $table): void {
+            $table->dropColumn('shipping_courier_name');
+        });
+    }
+};

@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BerkatCell — Toko HP & Aksesoris Terpercaya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
+        colors: {
+          ink: { DEFAULT: '#111114', soft: '#1b1b20', mute: '#26262d' },
+          gold: { light: '#F4CE5E', DEFAULT: '#E0A82E', deep: '#B8821C' },
+          leaf: { DEFAULT: '#16A34A', dark: '#15803D' },
+          paper: '#FBFBF9',
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(17,17,20,.04), 0 8px 24px -12px rgba(17,17,20,.12)',
+          cardHover: '0 4px 10px rgba(17,17,20,.06), 0 22px 40px -18px rgba(17,17,20,.28)',
+        },
+      },
+    },
+  };
+</script>
+<script>
+  /* Enable entrance animations only when the document is actually VISIBLE.
+     CSS @keyframes do not advance while the tab is hidden, so an element whose
+     only path to opacity:1 is `animation ... forwards` would stay invisible in
+     hidden-tab / capture / prerender contexts. By withholding the .anim-ready
+     class until visible, the base (visible) state is what shows in those cases. */
+  (function () {
+    var enable = function () { document.documentElement.classList.add('anim-ready'); };
+    if (document.visibilityState === 'visible') {
+      enable();
+    } else {
+      document.addEventListener('visibilitychange', function onVis() {
+        if (document.visibilityState === 'visible') {
+          document.removeEventListener('visibilitychange', onVis);
+          enable();
+        }
+      });
+    }
+  })();
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { background: #FBFBF9; color: #111114; -webkit-font-smoothing: antialiased; }
+
+  /* striped product placeholders */
+  .ph-stripe {
+    background-color: #f2f2ee;
+    background-image: repeating-linear-gradient(45deg, #f2f2ee 0, #f2f2ee 9px, #ebebe5 9px, #ebebe5 18px);
+  }
+  .ph-stripe-dark {
+    background-color: #18181d;
+    background-image: repeating-linear-gradient(45deg, #18181d 0, #18181d 11px, #1f1f26 11px, #1f1f26 22px);
+  }
+
+  /* gold radial glow in hero */
+  .hero-glow {
+    background:
+      radial-gradient(620px 420px at 78% 42%, rgba(224,168,46,.30), transparent 62%),
+      radial-gradient(380px 300px at 95% 75%, rgba(224,168,46,.16), transparent 60%);
+  }
+
+  /* load + scroll reveal — base state is VISIBLE; hidden/animated state only applies
+     once JS adds .anim-ready (so print, prerender & no-JS contexts show content). */
+  .reveal { opacity: 1; transform: none; transition: opacity .7s cubic-bezier(.22,.61,.36,1), transform .7s cubic-bezier(.22,.61,.36,1); }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+  .anim { opacity: 1; }
+  .d1 { animation-delay: .05s; } .d2 { animation-delay: .18s; } .d3 { animation-delay: .31s; }
+  .d4 { animation-delay: .44s; } .d5 { animation-delay: .57s; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .anim-ready .reveal { opacity: 0; transform: translateY(22px); }
+    .anim-ready .reveal.in { opacity: 1; transform: none; }
+    .anim-ready .anim { opacity: 0; animation: riseIn .8s cubic-bezier(.22,.61,.36,1) forwards; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  .nav-link { position: relative; }
+  .nav-link::after { content: ''; position: absolute; left: 0; right: 100%; bottom: -6px; height: 2px; background: #E0A82E; transition: right .28s ease; }
+  .nav-link:hover::after { right: 0; }
+  .nav-link.active::after { right: 0; }
+
+  .card-lift { transition: transform .35s cubic-bezier(.22,.61,.36,1), box-shadow .35s ease; }
+  .card-lift:hover { transform: translateY(-6px); }
+  .glyph-zoom img, .glyph-zoom svg { transition: transform .5s cubic-bezier(.22,.61,.36,1); }
+  .glyph-zoom:hover svg { transform: scale(1.06) rotate(-1deg); }
+
+  ::selection { background: #E0A82E; color: #111114; }
+</style>
+</head>
+<body class="font-sans">
+
+  <!-- ============ TOP ANNOUNCEMENT BAR ============ -->
+  <div class="bg-ink text-white/90 text-[13px]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-10 flex items-center justify-between">
+      <p class="flex items-center gap-2 truncate">
+        <span class="text-gold">★</span>
+        <span class="truncate">Gratis ongkir untuk pembelian di atas <span class="font-semibold text-white">Rp 5.000.000</span> ke seluruh Indonesia</span>
+      </p>
+      <div class="hidden sm:flex items-center gap-5 text-white/70">
+        <a href="#" class="hover:text-gold transition-colors">Lacak Pesanan</a>
+        <span class="w-px h-3.5 bg-white/20"></span>
+        <a href="#" class="hover:text-gold transition-colors">Bantuan</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HEADER ============ -->
+  <header class="sticky top-0 z-50 bg-paper/85 backdrop-blur-md border-b border-black/[.06]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[68px] flex items-center gap-6">
+      <!-- Logo (text only) -->
+      <a href="#" class="flex items-baseline gap-0.5 select-none mr-1 shrink-0">
+        <span class="text-[22px] font-extrabold tracking-tight text-ink">Berkat</span>
+        <span class="text-[22px] font-extrabold tracking-tight text-gold-deep">Cell</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="hidden lg:flex items-center gap-8 text-[15px] font-medium text-ink/70 ml-2">
+        <a href="#" class="nav-link active text-ink">Beranda</a>
+        <a href="#produk" class="nav-link hover:text-ink transition-colors">Produk</a>
+        <a href="#kategori" class="nav-link hover:text-ink transition-colors">Kategori</a>
+        <a href="#promo" class="nav-link hover:text-ink transition-colors">Promo</a>
+        <a href="#tentang" class="nav-link hover:text-ink transition-colors">Tentang Kami</a>
+        <a href="#kontak" class="nav-link hover:text-ink transition-colors">Kontak</a>
+      </nav>
+
+      <!-- Right actions -->
+      <div class="flex items-center gap-1.5 ml-auto">
+        <button class="grid place-items-center w-10 h-10 rounded-full text-ink/70 hover:bg-black/5 hover:text-ink transition-colors" aria-label="Cari">
+          <svg viewBox="0 0 24 24" class="w-[22px] h-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+        <button class="grid place-items-center w-10 h-10 rounded-full text-ink/70 hover:bg-black/5 hover:text-ink transition-colors" aria-label="Akun">
+          <svg viewBox="0 0 24 24" class="w-[22px] h-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5S18.2 16.4 19 20"/></svg>
+        </button>
+        <button class="relative grid place-items-center w-10 h-10 rounded-full text-ink/70 hover:bg-black/5 hover:text-ink transition-colors" aria-label="Keranjang">
+          <svg viewBox="0 0 24 24" class="w-[22px] h-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+          <span class="absolute top-1 right-1 min-w-[17px] h-[17px] px-1 grid place-items-center rounded-full bg-leaf text-white text-[10px] font-bold leading-none">2</span>
+        </button>
+        <!-- Mobile menu -->
+        <button id="menuBtn" class="lg:hidden grid place-items-center w-10 h-10 rounded-full text-ink/70 hover:bg-black/5 transition-colors ml-0.5" aria-label="Menu">
+          <svg viewBox="0 0 24 24" class="w-[22px] h-[22px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile nav drawer -->
+    <div id="mobileNav" class="lg:hidden hidden border-t border-black/[.06] bg-paper">
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col text-[15px] font-medium">
+        <a href="#" class="py-2.5 text-ink">Beranda</a>
+        <a href="#produk" class="py-2.5 text-ink/70">Produk</a>
+        <a href="#kategori" class="py-2.5 text-ink/70">Kategori</a>
+        <a href="#promo" class="py-2.5 text-ink/70">Promo</a>
+        <a href="#tentang" class="py-2.5 text-ink/70">Tentang Kami</a>
+        <a href="#kontak" class="py-2.5 text-ink/70">Kontak</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ============ HERO SLIDER ============ -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+    <div id="heroSlider" class="reveal relative overflow-hidden rounded-2xl bg-ink shadow-card">
+      <!-- track -->
+      <div id="heroTrack" class="flex transition-transform duration-700 ease-[cubic-bezier(.22,.61,.36,1)]">
+        <div class="shrink-0 w-full">
+          <img src="assets/hero-1.webp" alt="Promo Samsung" class="block w-full h-auto" loading="eager" />
+        </div>
+        <div class="shrink-0 w-full">
+          <img src="assets/hero-1.webp" alt="Promo Samsung" class="block w-full h-auto" loading="lazy" />
+        </div>
+        <div class="shrink-0 w-full">
+          <img src="assets/hero-1.webp" alt="Promo Samsung" class="block w-full h-auto" loading="lazy" />
+        </div>
+      </div>
+
+      <!-- pagination -->
+      <div id="heroDots" class="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+        <button data-i="0" aria-label="Slide 1" class="h-2 rounded-full bg-white transition-all duration-300"></button>
+        <button data-i="1" aria-label="Slide 2" class="h-2 rounded-full bg-white/55 transition-all duration-300"></button>
+        <button data-i="2" aria-label="Slide 3" class="h-2 rounded-full bg-white/55 transition-all duration-300"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ KATEGORI ============ -->
+  <section id="kategori" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+    <div class="reveal text-center max-w-2xl mx-auto">
+      <p class="text-[13px] font-semibold tracking-[.18em] uppercase text-gold-deep">Jelajahi</p>
+      <h2 class="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Kategori Pilihan</h2>
+      <p class="mt-3 text-ink/55">Temukan perangkat dan aksesoris favoritmu berdasarkan brand.</p>
+    </div>
+
+    <div class="reveal mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
+      <!-- category card -->
+      <a href="#produk" class="group card-lift bg-white rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover p-5 text-center">
+        <div class="glyph-zoom mx-auto w-24 h-24 rounded-full bg-gold/10 grid place-items-center">
+          <svg viewBox="0 0 64 64" class="w-11 h-11 text-ink/35" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+        </div>
+        <h3 class="mt-4 font-bold text-[17px]">iPhone</h3>
+        <span class="mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-gold-deep group-hover:gap-2 transition-all">Lihat Produk <span aria-hidden="true">›</span></span>
+      </a>
+      <a href="#produk" class="group card-lift bg-white rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover p-5 text-center">
+        <div class="glyph-zoom mx-auto w-24 h-24 rounded-full bg-gold/10 grid place-items-center">
+          <svg viewBox="0 0 64 64" class="w-11 h-11 text-ink/35" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+        </div>
+        <h3 class="mt-4 font-bold text-[17px]">Samsung</h3>
+        <span class="mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-gold-deep group-hover:gap-2 transition-all">Lihat Produk <span aria-hidden="true">›</span></span>
+      </a>
+      <a href="#produk" class="group card-lift bg-white rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover p-5 text-center">
+        <div class="glyph-zoom mx-auto w-24 h-24 rounded-full bg-gold/10 grid place-items-center">
+          <svg viewBox="0 0 64 64" class="w-11 h-11 text-ink/35" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+        </div>
+        <h3 class="mt-4 font-bold text-[17px]">Xiaomi</h3>
+        <span class="mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-gold-deep group-hover:gap-2 transition-all">Lihat Produk <span aria-hidden="true">›</span></span>
+      </a>
+      <a href="#produk" class="group card-lift bg-white rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover p-5 text-center">
+        <div class="glyph-zoom mx-auto w-24 h-24 rounded-full bg-gold/10 grid place-items-center">
+          <svg viewBox="0 0 64 64" class="w-11 h-11 text-ink/35" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+        </div>
+        <h3 class="mt-4 font-bold text-[17px]">realme</h3>
+        <span class="mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-gold-deep group-hover:gap-2 transition-all">Lihat Produk <span aria-hidden="true">›</span></span>
+      </a>
+      <a href="#aksesoris" class="group card-lift bg-white rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover p-5 text-center">
+        <div class="glyph-zoom mx-auto w-24 h-24 rounded-full bg-gold/10 grid place-items-center">
+          <svg viewBox="0 0 64 64" class="w-11 h-11 text-ink/35" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 30v-2a16 16 0 0 1 32 0v2"/><rect x="12" y="30" width="9" height="16" rx="3"/><rect x="43" y="30" width="9" height="16" rx="3"/></svg>
+        </div>
+        <h3 class="mt-4 font-bold text-[17px]">Aksesoris</h3>
+        <span class="mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-gold-deep group-hover:gap-2 transition-all">Lihat Produk <span aria-hidden="true">›</span></span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ============ PRODUK UNGGULAN ============ -->
+  <section id="produk" class="bg-white border-y border-black/[.05]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+      <div class="reveal flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <p class="text-[13px] font-semibold tracking-[.18em] uppercase text-gold-deep">Paling Diburu</p>
+          <h2 class="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Produk Unggulan</h2>
+        </div>
+        <a href="#" class="hidden sm:inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink/70 hover:text-gold-deep transition-colors">Lihat Semua <span aria-hidden="true">›</span></a>
+      </div>
+
+      <div class="reveal mt-9 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+
+        <!-- product card -->
+        <article class="group card-lift bg-paper rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+          <div class="relative ph-stripe glyph-zoom aspect-square grid place-items-center">
+            <span class="absolute top-3 left-3 rounded-full bg-red-600 text-white text-[12px] font-bold px-2.5 py-1">-10%</span>
+            <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-semibold text-[15px] leading-snug">iPhone 15 Pro Max 256GB</h3>
+            <p class="mt-1 text-[12.5px] text-ink/45">256GB &middot; 8GB RAM</p>
+            <div class="mt-2.5">
+              <p class="text-leaf font-extrabold text-[17px]">Rp 20.499.000</p>
+              <p class="text-[12.5px] text-ink/40 line-through">Rp 22.999.000</p>
+            </div>
+            <button class="mt-auto pt-3.5">
+              <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-leaf hover:bg-leaf-dark text-white text-[14px] font-semibold py-2.5 transition-colors">
+                <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+                Beli Sekarang
+              </span>
+            </button>
+          </div>
+        </article>
+
+        <article class="group card-lift bg-paper rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+          <div class="relative ph-stripe glyph-zoom aspect-square grid place-items-center">
+            <span class="absolute top-3 left-3 rounded-full bg-red-600 text-white text-[12px] font-bold px-2.5 py-1">-12%</span>
+            <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-semibold text-[15px] leading-snug">Samsung Galaxy S24 Ultra</h3>
+            <p class="mt-1 text-[12.5px] text-ink/45">256GB &middot; 12GB RAM</p>
+            <div class="mt-2.5">
+              <p class="text-leaf font-extrabold text-[17px]">Rp 18.999.000</p>
+              <p class="text-[12.5px] text-ink/40 line-through">Rp 21.499.000</p>
+            </div>
+            <button class="mt-auto pt-3.5">
+              <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-leaf hover:bg-leaf-dark text-white text-[14px] font-semibold py-2.5 transition-colors">
+                <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+                Beli Sekarang
+              </span>
+            </button>
+          </div>
+        </article>
+
+        <article class="group card-lift bg-paper rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+          <div class="relative ph-stripe glyph-zoom aspect-square grid place-items-center">
+            <span class="absolute top-3 left-3 rounded-full bg-red-600 text-white text-[12px] font-bold px-2.5 py-1">-9%</span>
+            <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-semibold text-[15px] leading-snug">Xiaomi 14 5G</h3>
+            <p class="mt-1 text-[12.5px] text-ink/45">256GB &middot; 12GB RAM</p>
+            <div class="mt-2.5">
+              <p class="text-leaf font-extrabold text-[17px]">Rp 11.499.000</p>
+              <p class="text-[12.5px] text-ink/40 line-through">Rp 12.599.000</p>
+            </div>
+            <button class="mt-auto pt-3.5">
+              <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-leaf hover:bg-leaf-dark text-white text-[14px] font-semibold py-2.5 transition-colors">
+                <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+                Beli Sekarang
+              </span>
+            </button>
+          </div>
+        </article>
+
+        <article class="group card-lift bg-paper rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+          <div class="relative ph-stripe glyph-zoom aspect-square grid place-items-center">
+            <span class="absolute top-3 left-3 rounded-full bg-red-600 text-white text-[12px] font-bold px-2.5 py-1">-11%</span>
+            <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-semibold text-[15px] leading-snug">realme GT 5</h3>
+            <p class="mt-1 text-[12.5px] text-ink/45">256GB &middot; 12GB RAM</p>
+            <div class="mt-2.5">
+              <p class="text-leaf font-extrabold text-[17px]">Rp 8.499.000</p>
+              <p class="text-[12.5px] text-ink/40 line-through">Rp 9.599.000</p>
+            </div>
+            <button class="mt-auto pt-3.5">
+              <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-leaf hover:bg-leaf-dark text-white text-[14px] font-semibold py-2.5 transition-colors">
+                <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+                Beli Sekarang
+              </span>
+            </button>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PRODUK TERBARU ============ -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+    <div class="reveal flex items-end justify-between gap-4 flex-wrap">
+      <div>
+        <p class="text-[13px] font-semibold tracking-[.18em] uppercase text-gold-deep">Baru Datang</p>
+        <h2 class="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Produk Terbaru</h2>
+      </div>
+      <a href="#" class="hidden sm:inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink/70 hover:text-gold-deep transition-colors">Lihat Semua <span aria-hidden="true">›</span></a>
+    </div>
+
+    <div class="reveal mt-9 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+
+      <article class="group card-lift bg-white rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+        <div class="relative ph-stripe glyph-zoom aspect-square grid place-items-center">
+          <span class="absolute top-3 left-3 rounded-full bg-gold text-ink text-[11px] font-bold tracking-wide px-2.5 py-1">BARU</span>
+          <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+        </div>
+        <div class="p-4 flex flex-col flex-1">
+          <h3 class="font-semibold text-[15px] leading-snug">iPhone 16 128GB</h3>
+          <p class="mt-1 text-[12.5px] text-ink/45">128GB &middot; 8GB RAM</p>
+          <p class="mt-2.5 text-leaf font-extrabold text-[17px]">Rp 14.999.000</p>
+          <button class="mt-auto pt-3.5">
+            <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-leaf hover:bg-leaf-dark text-white text-[14px] font-semibold py-2.5 transition-colors">
+              <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+              Beli Sekarang
+            </span>
+          </button>
+        </div>
+      </article>
+
+      <article class="group card-lift bg-white rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+        <div class="relative ph-stripe glyph-zoom aspect-square grid place-items-center">
+          <span class="absolute top-3 left-3 rounded-full bg-gold text-ink text-[11px] font-bold tracking-wide px-2.5 py-1">BARU</span>
+          <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+        </div>
+        <div class="p-4 flex flex-col flex-1">
+          <h3 class="font-semibold text-[15px] leading-snug">Samsung Galaxy Z Flip6</h3>
+          <p class="mt-1 text-[12.5px] text-ink/45">256GB &middot; 12GB RAM</p>
+          <p class="mt-2.5 text-leaf font-extrabold text-[17px]">Rp 13.999.000</p>
+          <button class="mt-auto pt-3.5">
+            <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-leaf hover:bg-leaf-dark text-white text-[14px] font-semibold py-2.5 transition-colors">
+              <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+              Beli Sekarang
+            </span>
+          </button>
+        </div>
+      </article>
+
+      <article class="group card-lift bg-white rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+        <div class="relative ph-stripe glyph-zoom aspect-square grid place-items-center">
+          <span class="absolute top-3 left-3 rounded-full bg-gold text-ink text-[11px] font-bold tracking-wide px-2.5 py-1">BARU</span>
+          <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+        </div>
+        <div class="p-4 flex flex-col flex-1">
+          <h3 class="font-semibold text-[15px] leading-snug">POCO X6 Pro 5G</h3>
+          <p class="mt-1 text-[12.5px] text-ink/45">256GB &middot; 12GB RAM</p>
+          <p class="mt-2.5 text-leaf font-extrabold text-[17px]">Rp 5.599.000</p>
+          <button class="mt-auto pt-3.5">
+            <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-leaf hover:bg-leaf-dark text-white text-[14px] font-semibold py-2.5 transition-colors">
+              <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+              Beli Sekarang
+            </span>
+          </button>
+        </div>
+      </article>
+
+      <article class="group card-lift bg-white rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+        <div class="relative ph-stripe glyph-zoom aspect-square grid place-items-center">
+          <span class="absolute top-3 left-3 rounded-full bg-gold text-ink text-[11px] font-bold tracking-wide px-2.5 py-1">BARU</span>
+          <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="8" width="22" height="48" rx="5"/><line x1="28" y1="13" x2="36" y2="13"/></svg>
+        </div>
+        <div class="p-4 flex flex-col flex-1">
+          <h3 class="font-semibold text-[15px] leading-snug">realme 12 Pro+ 5G</h3>
+          <p class="mt-1 text-[12.5px] text-ink/45">256GB &middot; 12GB RAM</p>
+          <p class="mt-2.5 text-leaf font-extrabold text-[17px]">Rp 6.999.000</p>
+          <button class="mt-auto pt-3.5">
+            <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-leaf hover:bg-leaf-dark text-white text-[14px] font-semibold py-2.5 transition-colors">
+              <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+              Beli Sekarang
+            </span>
+          </button>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ AKSESORIS ============ -->
+  <section id="aksesoris" class="bg-white border-y border-black/[.05]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+      <div class="reveal flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <p class="text-[13px] font-semibold tracking-[.18em] uppercase text-gold-deep">Lengkapi Gadgetmu</p>
+          <h2 class="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Aksesoris Pilihan</h2>
+        </div>
+        <a href="#" class="hidden sm:inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink/70 hover:text-gold-deep transition-colors">Lihat Semua <span aria-hidden="true">›</span></a>
+      </div>
+
+      <div class="reveal mt-9 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+
+        <article class="group card-lift bg-paper rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+          <div class="ph-stripe glyph-zoom aspect-square grid place-items-center">
+            <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="18" width="32" height="28" rx="5"/><line x1="48" y1="27" x2="52" y2="27"/><line x1="48" y1="37" x2="52" y2="37"/></svg>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-semibold text-[15px] leading-snug">Power Bank 20.000mAh</h3>
+            <p class="mt-1 text-[12.5px] text-ink/45">Fast Charging &middot; 22.5W</p>
+            <p class="mt-2.5 text-leaf font-extrabold text-[17px]">Rp 499.000</p>
+            <button class="mt-auto pt-3.5">
+              <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-ink hover:bg-ink-soft text-white text-[14px] font-semibold py-2.5 transition-colors">Tambah ke Keranjang</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="group card-lift bg-paper rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+          <div class="ph-stripe glyph-zoom aspect-square grid place-items-center">
+            <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 32v-2a16 16 0 0 1 32 0v2"/><rect x="12" y="32" width="9" height="15" rx="3"/><rect x="43" y="32" width="9" height="15" rx="3"/></svg>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-semibold text-[15px] leading-snug">TWS Earbuds Pro</h3>
+            <p class="mt-1 text-[12.5px] text-ink/45">ANC &middot; Bluetooth 5.3</p>
+            <p class="mt-2.5 text-leaf font-extrabold text-[17px]">Rp 350.000</p>
+            <button class="mt-auto pt-3.5">
+              <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-ink hover:bg-ink-soft text-white text-[14px] font-semibold py-2.5 transition-colors">Tambah ke Keranjang</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="group card-lift bg-paper rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+          <div class="ph-stripe glyph-zoom aspect-square grid place-items-center">
+            <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M34 8 20 34h11l-2 22 16-28H34l2-20Z"/></svg>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-semibold text-[15px] leading-snug">Fast Charger 65W GaN</h3>
+            <p class="mt-1 text-[12.5px] text-ink/45">USB-C &middot; PD 3.0</p>
+            <p class="mt-2.5 text-leaf font-extrabold text-[17px]">Rp 250.000</p>
+            <button class="mt-auto pt-3.5">
+              <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-ink hover:bg-ink-soft text-white text-[14px] font-semibold py-2.5 transition-colors">Tambah ke Keranjang</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="group card-lift bg-paper rounded-2xl border border-black/[.06] shadow-card hover:shadow-cardHover overflow-hidden flex flex-col">
+          <div class="ph-stripe glyph-zoom aspect-square grid place-items-center">
+            <svg viewBox="0 0 64 64" class="w-16 h-16 text-ink/20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="8" width="24" height="48" rx="6"/><circle cx="32" cy="18" r="3"/></svg>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-semibold text-[15px] leading-snug">Premium Silicone Case</h3>
+            <p class="mt-1 text-[12.5px] text-ink/45">Anti Gores &middot; Slim Fit</p>
+            <p class="mt-2.5 text-leaf font-extrabold text-[17px]">Rp 150.000</p>
+            <button class="mt-auto pt-3.5">
+              <span class="flex items-center justify-center gap-2 w-full rounded-xl bg-ink hover:bg-ink-soft text-white text-[14px] font-semibold py-2.5 transition-colors">Tambah ke Keranjang</span>
+            </button>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROMO BANNER ============ -->
+  <section id="promo" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-16">
+    <div class="reveal relative overflow-hidden rounded-3xl bg-ink text-white">
+      <div class="absolute inset-0 hero-glow"></div>
+      <div class="relative grid lg:grid-cols-2 gap-10 p-8 sm:p-10 lg:p-12 items-center">
+        <div>
+          <span class="inline-flex items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-[12px] font-bold tracking-wide">HANYA HARI INI!</span>
+          <h2 class="mt-4 text-2xl sm:text-3xl font-bold text-white/90">Penawaran Terbatas —</h2>
+          <p class="text-4xl sm:text-5xl font-extrabold leading-tight">Diskon Hingga <span class="text-gold">20%</span></p>
+          <p class="mt-4 text-white/60 max-w-md">Jangan lewatkan kesempatan mendapatkan smartphone idamanmu dengan harga spesial. Stok terbatas — buruan sebelum kehabisan!</p>
+        </div>
+
+        <div class="lg:text-right">
+          <p class="text-xl sm:text-2xl font-bold leading-snug">Stok Terbatas,<br><span class="text-gold">Buruan Beli Sekarang!</span></p>
+          <a href="#produk" class="mt-6 inline-flex items-center gap-2.5 rounded-xl bg-leaf hover:bg-leaf-dark px-7 py-3.5 text-[15px] font-semibold shadow-lg shadow-leaf/25 transition-colors">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l1.6 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+            Belanja Sekarang
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer id="kontak" class="bg-ink text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
+      <div class="grid gap-10 md:gap-8 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+        <!-- brand -->
+        <div id="tentang">
+          <a href="#" class="flex items-baseline gap-0.5 select-none">
+            <span class="text-xl font-extrabold tracking-tight text-white">Berkat</span>
+            <span class="text-xl font-extrabold tracking-tight text-gold">Cell</span>
+          </a>
+          <p class="mt-4 text-[14px] leading-relaxed text-white/55 max-w-xs">Toko online terpercaya untuk kebutuhan smartphone dan aksesoris Anda. Produk original, garansi resmi, dan harga terbaik.</p>
+          <div class="mt-6 flex items-center gap-2.5">
+            <a href="#" aria-label="Facebook" class="grid place-items-center w-9 h-9 rounded-full bg-white/[.06] hover:bg-gold hover:text-ink text-white/70 transition-colors"><svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="currentColor"><path d="M14 9h2.5V6.2H14c-2 0-3.3 1.3-3.3 3.3v1.6H8.5V14h2.2v6h2.8v-6h2.2l.4-2.9h-2.6V9.8c0-.6.3-.8.9-.8Z"/></svg></a>
+            <a href="#" aria-label="Instagram" class="grid place-items-center w-9 h-9 rounded-full bg-white/[.06] hover:bg-gold hover:text-ink text-white/70 transition-colors"><svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4.5" y="4.5" width="15" height="15" rx="4.5"/><circle cx="12" cy="12" r="3.4"/><circle cx="16.4" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg></a>
+            <a href="#" aria-label="TikTok" class="grid place-items-center w-9 h-9 rounded-full bg-white/[.06] hover:bg-gold hover:text-ink text-white/70 transition-colors"><svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="currentColor"><path d="M16 4c.4 2 1.6 3.4 3.6 3.7v2.6c-1.4.1-2.6-.3-3.7-1v5.2c0 3-2.1 5-4.9 5C8.4 19.5 6.4 17.6 6.4 15c0-2.4 1.9-4.3 4.3-4.3.3 0 .6 0 .9.1v2.7c-.3-.1-.6-.2-.9-.2-1 0-1.7.8-1.7 1.7 0 1 .7 1.7 1.7 1.7s1.8-.7 1.8-2V4H16Z"/></svg></a>
+            <a href="#" aria-label="YouTube" class="grid place-items-center w-9 h-9 rounded-full bg-white/[.06] hover:bg-gold hover:text-ink text-white/70 transition-colors"><svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="currentColor"><path d="M21 8.4c-.2-1-.9-1.7-1.8-1.9C17.5 6 12 6 12 6s-5.5 0-7.2.5C3.9 6.7 3.2 7.4 3 8.4 2.6 10 2.6 12 2.6 12s0 2 .4 3.6c.2 1 .9 1.7 1.8 1.9C6.5 18 12 18 12 18s5.5 0 7.2-.5c.9-.2 1.6-.9 1.8-1.9.4-1.6.4-3.6.4-3.6s0-2-.4-3.6ZM10.4 14.6V9.4l4.4 2.6-4.4 2.6Z"/></svg></a>
+          </div>
+        </div>
+
+        <!-- informasi -->
+        <div>
+          <h4 class="text-[15px] font-bold">Informasi</h4>
+          <ul class="mt-4 space-y-3 text-[14px] text-white/55">
+            <li><a href="#" class="hover:text-gold transition-colors">Tentang Kami</a></li>
+            <li><a href="#" class="hover:text-gold transition-colors">Cara Belanja</a></li>
+            <li><a href="#" class="hover:text-gold transition-colors">Pembayaran</a></li>
+            <li><a href="#" class="hover:text-gold transition-colors">Pengiriman</a></li>
+            <li><a href="#" class="hover:text-gold transition-colors">Kebijakan Privasi</a></li>
+            <li><a href="#" class="hover:text-gold transition-colors">Syarat &amp; Ketentuan</a></li>
+          </ul>
+        </div>
+
+        <!-- layanan -->
+        <div>
+          <h4 class="text-[15px] font-bold">Layanan Pelanggan</h4>
+          <ul class="mt-4 space-y-3 text-[14px] text-white/55">
+            <li><a href="#" class="hover:text-gold transition-colors">FAQ</a></li>
+            <li><a href="#" class="hover:text-gold transition-colors">Garansi &amp; Retur</a></li>
+            <li><a href="#" class="hover:text-gold transition-colors">Cek Pesanan</a></li>
+            <li><a href="#" class="hover:text-gold transition-colors">Hubungi Kami</a></li>
+            <li><a href="#" class="hover:text-gold transition-colors">Ulasan Pelanggan</a></li>
+          </ul>
+        </div>
+
+        <!-- kontak -->
+        <div>
+          <h4 class="text-[15px] font-bold">Kontak Kami</h4>
+          <ul class="mt-4 space-y-4 text-[14px] text-white/60">
+            <li class="flex items-start gap-3">
+              <span class="text-gold mt-0.5"><svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3l1.5 5-2 1.2a12 12 0 0 0 5.3 5.3l1.2-2 5 1.5v3a1.6 1.6 0 0 1-1.7 1.6A16 16 0 0 1 3.4 5.7 1.6 1.6 0 0 1 5 4Z"/></svg></span>
+              <span>0812-3456-7890</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="text-gold mt-0.5"><svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="m4.5 7 7.5 5 7.5-5"/></svg></span>
+              <span>halo@berkatcell.id</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="text-gold mt-0.5"><svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.4"/></svg></span>
+              <span>Jl. Sudirman No. 123,<br>Jakarta Pusat, 10220</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="text-gold mt-0.5"><svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>
+              <span>Senin – Minggu, 09.00 – 21.00</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-12 pt-6 border-t border-white/10 text-center text-[13px] text-white/45">
+        <p>Copyright © 2026. All Rights Reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Mobile menu toggle
+    const menuBtn = document.getElementById('menuBtn');
+    const mobileNav = document.getElementById('mobileNav');
+    menuBtn.addEventListener('click', () => mobileNav.classList.toggle('hidden'));
+    mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mobileNav.classList.add('hidden')));
+
+    // Scroll reveal
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+    // Hero auto-loop slider
+    (function () {
+      const track = document.getElementById('heroTrack');
+      const dots = Array.from(document.querySelectorAll('#heroDots button'));
+      if (!track || !dots.length) return;
+      const count = dots.length;
+      let i = 0, timer;
+
+      function render() {
+        track.style.transform = 'translateX(' + (-i * 100) + '%)';
+        dots.forEach((d, n) => {
+          const on = n === i;
+          d.classList.toggle('bg-white', on);
+          d.classList.toggle('bg-white/55', !on);
+          d.style.width = on ? '22px' : '8px';
+        });
+      }
+      function go(n) { i = (n + count) % count; render(); }
+      function start() { stop(); timer = setInterval(() => go(i + 1), 4000); }
+      function stop() { if (timer) clearInterval(timer); }
+
+      dots.forEach(d => d.addEventListener('click', () => { go(+d.dataset.i); start(); }));
+      const slider = document.getElementById('heroSlider');
+      slider.addEventListener('mouseenter', stop);
+      slider.addEventListener('mouseleave', start);
+      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' ? start() : stop());
+
+      render();
+      start();
+    })();
+
+    // Safety net: if anything kept a .reveal element hidden (e.g. observer never
+    // fired), reveal it so content can never get stuck invisible.
+    window.addEventListener('load', () => {
+      setTimeout(() => document.querySelectorAll('.reveal:not(.in)').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight) el.classList.add('in');
+      }), 1200);
+    });
+  </script>
+</body>
+</html>
