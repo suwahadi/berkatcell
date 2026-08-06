@@ -26,4 +26,7 @@ yarn-error.log
 /.github
 /database/*.sqlite
 /storage/app/private/livewire-tmp
-# /docs
+/docs
+/revamp
+/graphify-out
+/.playwright-mcp
