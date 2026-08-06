@@ -60,6 +60,26 @@ class Order extends Model
         return 'uuid';
     }
 
+    public const PICKUP_COURIER = 'pickup';
+
+    public function isPickup(): bool
+    {
+        return $this->shipping_courier === self::PICKUP_COURIER;
+    }
+
+    /**
+     * Label status yang sadar konteks: pesanan yang diambil sendiri tidak pernah
+     * "dikirim". Enum-nya tidak berubah, hanya teks yang ditampilkan.
+     */
+    public function statusLabel(): string
+    {
+        if ($this->isPickup() && $this->status === OrderStatus::SHIPPED) {
+            return 'Sudah Diambil';
+        }
+
+        return $this->status->label();
+    }
+
     /**
      * Label ringkas jasa kirim untuk headline, mis. "JNE REG" atau "J&T Express EZ".
      * Memakai peta kurir agar singkat; jatuh ke nama API lalu kode bila tidak dikenal.

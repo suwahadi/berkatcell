@@ -19,6 +19,9 @@ new #[Title('Checkout')] #[Layout('layouts::storefront')] class extends Componen
     public string $customer_phone = '';
     public string $shipping_address = '';
 
+    /** delivery = dikirim kurir, pickup = diambil sendiri di toko. */
+    public string $shipping_mode = 'delivery';
+
     public string $destinationQuery = '';
     public ?int $destinationId = null;
     public ?string $destinationLabel = null;
@@ -91,6 +94,49 @@ new #[Title('Checkout')] #[Layout('layouts::storefront')] class extends Componen
     {
         $this->reset(['shipping_courier_name', 'shipping_service', 'shipping_service_label', 'shipping_etd', 'shipping_cost']);
         unset($this->shippingOptions);
+    }
+
+    /**
+     * Berpindah mode membuang seluruh state pengiriman sebelumnya supaya tidak
+     * ada sisa ongkir dari mode lain yang ikut terbawa ke order.
+     */
+    public function updatedShippingMode(): void
+    {
+        $this->reset([
+            'destinationId', 'destinationLabel', 'destinationQuery', 'courier',
+            'shipping_courier_name', 'shipping_service', 'shipping_service_label',
+            'shipping_etd', 'shipping_cost',
+        ]);
+        unset($this->shippingOptions);
+    }
+
+    public function isPickup(): bool
+    {
+        return $this->shipping_mode === 'pickup';
+    }
+
+    public function storeAddress(): string
+    {
+        return (string) setting('site_address', '');
+    }
+
+    /**
+     * Tujuan pengiriman untuk pesanan yang diambil sendiri adalah toko itu sendiri,
+     * jadi kolom alamat & wilayah diisi dari setting toko dan ongkirnya nol.
+     */
+    private function pickupShipping(): array
+    {
+        return [
+            'destination_id' => (int) setting('origin_district_id', 0),
+            'destination_label' => $this->storeAddress(),
+            'address' => $this->storeAddress(),
+            'courier' => Order::PICKUP_COURIER,
+            'courier_name' => ShippingService::COURIERS[Order::PICKUP_COURIER],
+            'service' => null,
+            'service_label' => null,
+            'etd' => null,
+            'cost' => 0,
+        ];
     }
 
     #[Computed]
@@ -192,10 +238,13 @@ new #[Title('Checkout')] #[Layout('layouts::storefront')] class extends Componen
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_email' => ['required', 'email', 'max:255'],
             'customer_phone' => ['required', 'string', 'max:50'],
-            'shipping_address' => ['required', 'string'],
-            'destinationId' => ['required', 'integer'],
-            'courier' => ['required', 'string'],
-            'shipping_cost' => ['required', 'integer', 'min:1'],
+            // Ambil di toko tidak perlu alamat, wilayah, kurir, maupun ongkir.
+            ...$this->isPickup() ? [] : [
+                'shipping_address' => ['required', 'string'],
+                'destinationId' => ['required', 'integer'],
+                'courier' => ['required', 'string'],
+                'shipping_cost' => ['required', 'integer', 'min:1'],
+            ],
         ]);
 
         $payload = [
@@ -204,7 +253,7 @@ new #[Title('Checkout')] #[Layout('layouts::storefront')] class extends Componen
                 'email' => $validated['customer_email'],
                 'phone' => $validated['customer_phone'],
             ],
-            'shipping' => [
+            'shipping' => $this->isPickup() ? $this->pickupShipping() : [
                 'destination_id' => $validated['destinationId'],
                 'destination_label' => $this->destinationLabel,
                 'address' => $validated['shipping_address'],
@@ -252,6 +301,40 @@ new #[Title('Checkout')] #[Layout('layouts::storefront')] class extends Componen
             </section>
 
             <section class="rounded-2xl border border-black/[.06] bg-white p-5 shadow-card">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-ink">Metode Pengiriman</h2>
+                <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                    @foreach ([
+                        'delivery' => ['label' => 'Kirim ke Alamat', 'note' => 'Diantar kurir, ongkir dihitung otomatis', 'icon' => 'truck'],
+                        'pickup' => ['label' => 'Ambil di Toko', 'note' => 'Tanpa ongkir, diambil sendiri di toko', 'icon' => 'building-storefront'],
+                    ] as $mode => $m)
+                        <label class="flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 transition {{ $shipping_mode === $mode ? 'border-gold bg-gold/10' : 'border-black/[.06] hover:border-ink/30' }}">
+                            <input type="radio" name="shipping_mode" value="{{ $mode }}" class="mt-0.5 accent-leaf"
+                                   wire:model.live="shipping_mode" />
+                            <span class="flex-1">
+                                <span class="block text-sm font-semibold text-ink">{{ $m['label'] }}</span>
+                                <span class="mt-0.5 block text-xs text-ink/55">{{ $m['note'] }}</span>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+            </section>
+
+            @if ($this->isPickup())
+                <section class="rounded-2xl border border-black/[.06] bg-white p-5 shadow-card">
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-ink">Lokasi Pengambilan</h2>
+                    <div class="mt-4 rounded-lg border border-leaf/40 bg-leaf/10 px-4 py-3">
+                        <p class="text-sm font-semibold text-leaf-dark">{{ setting('site_name') }}</p>
+                        <p class="mt-1 text-sm leading-relaxed text-ink/70">{{ $this->storeAddress() }}</p>
+                        @if (filled(setting('site_phone')))
+                            <p class="mt-2 text-xs text-ink/55">Telepon: {{ setting('site_phone') }}</p>
+                        @endif
+                    </div>
+                    <p class="mt-3 text-xs text-ink/45">
+                        Bawa nomor pesanan saat mengambil. Kami hubungi lebih dulu bila barang belum siap.
+                    </p>
+                </section>
+            @else
+            <section class="rounded-2xl border border-black/[.06] bg-white p-5 shadow-card">
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-ink">Alamat Pengiriman</h2>
 
                 <div class="mt-4">
@@ -293,7 +376,7 @@ new #[Title('Checkout')] #[Layout('layouts::storefront')] class extends Componen
             </section>
 
             <section class="rounded-2xl border border-black/[.06] bg-white p-5 shadow-card">
-                <h2 class="text-sm font-semibold uppercase tracking-wide text-ink">Metode Pengiriman</h2>
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-ink">Kurir &amp; Ongkos Kirim</h2>
                 <div class="mt-4">
                     <flux:select wire:model.live="courier" label="Pilih Kurir" placeholder="Pilih kurir…"
                                  class="cursor-pointer font-medium text-ink [&>option]:text-ink">
@@ -337,6 +420,7 @@ new #[Title('Checkout')] #[Layout('layouts::storefront')] class extends Componen
                     @endif
                 </div>
             </section>
+            @endif
         </div>
 
         <div class="h-fit space-y-4 self-start rounded-2xl border border-black/[.06] bg-white p-5 shadow-card lg:sticky lg:top-6">
@@ -405,7 +489,11 @@ new #[Title('Checkout')] #[Layout('layouts::storefront')] class extends Componen
                 @if ($discount > 0)
                     <div class="flex justify-between text-leaf"><span>Diskon</span><span>-{{ rupiah($discount) }}</span></div>
                 @endif
-                <div class="flex justify-between"><span class="text-ink/55">Ongkos Kirim</span><span class="font-semibold text-ink">{{ rupiah($shipping_cost) }}</span></div>
+                @if ($this->isPickup())
+                    <div class="flex justify-between"><span class="text-ink/55">Ongkos Kirim</span><span class="font-semibold text-leaf">Ambil di Toko</span></div>
+                @else
+                    <div class="flex justify-between"><span class="text-ink/55">Ongkos Kirim</span><span class="font-semibold text-ink">{{ rupiah($shipping_cost) }}</span></div>
+                @endif
                 <div class="flex justify-between border-t border-black/[.06] pt-2 text-base font-bold">
                     <span class="text-ink">Total</span>
                     <span class="text-leaf">{{ rupiah($this->grandTotal()) }}</span>

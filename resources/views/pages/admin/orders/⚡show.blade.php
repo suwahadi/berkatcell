@@ -58,7 +58,7 @@ new #[Title('Detail Pesanan')] #[Layout('layouts::admin')] class extends Compone
     <div class="flex items-center gap-3">
         <flux:button :href="route('admin.orders.index')" wire:navigate size="sm" variant="ghost" icon="arrow-left" />
         <h1 class="font-mono text-xl font-extrabold text-zinc-900 dark:text-white">{{ $order->order_number }}</h1>
-        <x-order-status-badge :status="$order->status" />
+        <x-order-status-badge :order="$order" />
     </div>
 
     <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">

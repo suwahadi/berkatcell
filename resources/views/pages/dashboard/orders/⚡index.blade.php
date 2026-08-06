@@ -91,7 +91,7 @@ new #[Title('Riwayat Pesanan')] #[Layout('layouts::app')] class extends Componen
                         <td class="px-5 py-3.5 font-mono font-bold text-zinc-900 dark:text-zinc-100">{{ $order->order_number }}</td>
                         <td class="px-5 py-3.5 text-zinc-500 dark:text-zinc-400">{{ tanggal_id($order->created_at) }}</td>
                         <td class="px-5 py-3.5 text-right font-mono font-bold text-zinc-900 dark:text-white">{{ rupiah($order->grand_total) }}</td>
-                        <td class="px-5 py-3.5"><x-order-status-badge :status="$order->status" /></td>
+                        <td class="px-5 py-3.5"><x-order-status-badge :order="$order" /></td>
                         <td class="px-5 py-3.5 text-right">
                             <a href="{{ route('dashboard.orders.show', $order->order_number) }}" wire:navigate
                                class="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-3.5 py-1.5 text-xs font-bold text-zinc-700 transition hover:border-amber-600 hover:text-amber-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-amber-500 dark:hover:text-amber-400">
@@ -112,7 +112,7 @@ new #[Title('Riwayat Pesanan')] #[Layout('layouts::app')] class extends Componen
                class="block rounded-xl border border-zinc-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
                 <div class="flex items-center justify-between gap-2">
                     <span class="truncate font-mono text-sm font-bold text-zinc-900 dark:text-zinc-100">{{ $order->order_number }}</span>
-                    <x-order-status-badge :status="$order->status" />
+                    <x-order-status-badge :order="$order" />
                 </div>
                 <div class="mt-2.5 flex items-center justify-between gap-2 border-t border-zinc-100 pt-2.5 dark:border-zinc-800">
                     <span class="text-xs text-zinc-400 dark:text-zinc-500">{{ tanggal_id($order->created_at) }}</span>

@@ -32,7 +32,7 @@ new #[Title('Detail Pesanan')] #[Layout('layouts::app')] class extends Component
                 <h1 class="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">Detail Pesanan</h1>
                 <p class="mt-0.5 font-mono text-sm text-zinc-400 dark:text-zinc-500">{{ $order->order_number }}</p>
             </div>
-            <x-order-status-badge :status="$order->status" class="self-start px-3 py-1 text-xs" />
+            <x-order-status-badge :order="$order" class="self-start px-3 py-1 text-xs" />
         </div>
     </div>
 

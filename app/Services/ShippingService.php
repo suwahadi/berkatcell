@@ -11,7 +11,13 @@ use Illuminate\Support\Facades\Log;
 
 class ShippingService
 {
+    /**
+     * `pickup` sengaja tidak masuk ENABLED_COURIERS: ia bukan kurir yang bisa
+     * dihitung ongkirnya, tapi tetap dipetakan di sini agar setiap tampilan yang
+     * memakai Order::shippingCourierName() otomatis membaca "Ambil di Toko".
+     */
     public const COURIERS = [
+        'pickup' => 'Ambil di Toko',
         'jne' => 'JNE',
         'jnt' => 'J&T Express',
         'sicepat' => 'SiCepat',

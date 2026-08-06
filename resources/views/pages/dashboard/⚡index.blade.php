@@ -87,7 +87,7 @@ new #[Title('Dashboard')] #[Layout('layouts::app')] class extends Component {
                 </div>
                 <div class="flex shrink-0 items-center gap-3">
                     <span class="hidden font-mono text-sm font-bold text-zinc-900 sm:inline dark:text-white">{{ rupiah($order->grand_total) }}</span>
-                    <x-order-status-badge :status="$order->status" />
+                    <x-order-status-badge :order="$order" />
                 </div>
             </a>
         @empty

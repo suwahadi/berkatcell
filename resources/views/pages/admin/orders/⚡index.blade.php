@@ -81,7 +81,7 @@ new #[Title('Pesanan')] #[Layout('layouts::admin')] class extends Component {
                         </td>
                         <td class="whitespace-nowrap px-5 py-3.5 text-zinc-500 dark:text-zinc-400">{{ tanggal_id($order->created_at) }}</td>
                         <td class="whitespace-nowrap px-5 py-3.5 text-right font-mono font-bold text-zinc-900 dark:text-white">{{ rupiah($order->grand_total) }}</td>
-                        <td class="px-5 py-3.5"><x-order-status-badge :status="$order->status" /></td>
+                        <td class="px-5 py-3.5"><x-order-status-badge :order="$order" /></td>
                         <td class="px-5 py-3.5 text-right">
                             <a href="{{ route('admin.orders.show', $order->order_number) }}" wire:navigate
                                class="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-3.5 py-1.5 text-xs font-bold text-zinc-700 transition hover:border-amber-600 hover:text-amber-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-amber-500 dark:hover:text-amber-400">

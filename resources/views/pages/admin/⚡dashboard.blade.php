@@ -74,7 +74,7 @@ new #[Title('Dashboard Admin')] #[Layout('layouts::admin')] class extends Compon
                             </div>
                             <div class="shrink-0 text-right">
                                 <p class="font-mono text-sm font-bold text-zinc-900 dark:text-white">{{ rupiah($order->grand_total) }}</p>
-                                <x-order-status-badge :status="$order->status" class="mt-1" />
+                                <x-order-status-badge :order="$order" class="mt-1" />
                             </div>
                         </a>
                     @endforeach

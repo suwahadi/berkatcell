@@ -1,7 +1,9 @@
-@props(['status'])
+{{-- Menerima order (bukan status) agar labelnya sadar konteks: pesanan pickup
+     menampilkan "Sudah Diambil", bukan "Dikirim". --}}
+@props(['order'])
 
 @php
-    $color = $status->color();
+    $color = $order->status->color();
     $classes = match ($color) {
         'amber' => 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/30',
         'emerald' => 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/30',
@@ -12,5 +14,5 @@
 @endphp
 
 <span {{ $attributes->merge(['class' => "inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-semibold ring-1 ring-inset $classes"]) }}>
-    {{ $status->label() }}
+    {{ $order->statusLabel() }}
 </span>

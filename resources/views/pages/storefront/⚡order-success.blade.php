@@ -169,7 +169,7 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
                         </div>
                         <div class="flex-1">
                             <span class="inline-flex items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
-                                {{ $order->status->label() }}
+                                {{ $order->statusLabel() }}
                             </span>
                             <h2 class="mt-2 text-lg font-extrabold tracking-tight text-white">Pembayaran Berhasil</h2>
                             <p class="mt-1 max-w-md text-sm leading-relaxed text-white/90">
@@ -206,7 +206,7 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
                     <div class="relative overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-gold/[.04] to-white p-5 shadow-card sm:p-6">
                         <span class="absolute inset-y-0 left-0 w-1 bg-gold"></span>
                         <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold uppercase tracking-[0.14em] text-gold-deep">{{ $order->status->label() }}</span>
+                            <span class="text-xs font-semibold uppercase tracking-[0.14em] text-gold-deep">{{ $order->statusLabel() }}</span>
                         </div>
                         <p class="mt-4 text-sm text-ink/60">Selesaikan pembayaran sebesar</p>
                         <p class="mt-0.5 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{{ rupiah($order->grand_total) }}</p>
