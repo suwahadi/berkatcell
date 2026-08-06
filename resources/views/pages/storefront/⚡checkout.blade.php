@@ -314,13 +314,12 @@ new #[Title('Checkout')] #[Layout('layouts::storefront')] class extends Componen
                         </div>
                         <div wire:loading.remove wire:target="shippingOptions, courier, selectDestination" class="grid grid-cols-2 gap-2 lg:grid-cols-3">
                             @forelse ($this->shippingOptions as $i => $opt)
-                                @php $courierLabel = $opt['name'] ?: (\App\Services\ShippingService::COURIERS[$courier] ?? strtoupper($courier)); @endphp
                                 <label class="flex cursor-pointer flex-col gap-1.5 rounded-lg border px-4 py-3 transition {{ $shipping_service === $opt['service'] ? 'border-gold bg-gold/10' : 'border-black/[.06] hover:border-ink/30' }}">
                                     <div class="flex items-start gap-2">
                                         <input type="radio" name="ship" class="mt-0.5 accent-leaf"
                                                @checked($shipping_service === $opt['service'])
                                                wire:click="selectShipping({{ $i }})" />
-                                        <p class="text-sm font-semibold text-ink">{{ $courierLabel }} <span class="text-gold-deep">{{ $opt['service'] }}</span></p>
+                                        <p class="text-sm font-semibold text-ink"><span class="text-gold-deep">{{ $opt['service'] }}</span></p>
                                     </div>
                                     <p class="text-xs text-ink/55">{{ $opt['description'] }} &middot; Estimasi {{ $opt['etd'] }}</p>
                                     <span class="text-sm font-bold text-ink">{{ rupiah($opt['cost']) }}</span>

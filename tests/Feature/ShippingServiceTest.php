@@ -106,6 +106,56 @@ class ShippingServiceTest extends TestCase
         Http::assertSent(fn ($request): bool => $request['origin'] === '17673');
     }
 
+    public function test_layanan_diurutkan_dari_tarif_termurah(): void
+    {
+        Http::fake([
+            'api.test/v1/calculate/*' => Http::response([
+                'meta' => ['code' => 200],
+                'data' => [
+                    ['name' => 'JNE', 'code' => 'jne', 'service' => 'YES', 'description' => 'Yakin Esok Sampai', 'cost' => 74000, 'etd' => '1 day'],
+                    ['name' => 'JNE', 'code' => 'jne', 'service' => 'REG', 'description' => 'Layanan Reguler', 'cost' => 35000, 'etd' => '3 day'],
+                    ['name' => 'JNE', 'code' => 'jne', 'service' => 'JTR', 'description' => 'JNE Trucking', 'cost' => 21000, 'etd' => '5 day'],
+                    ['name' => 'JNE', 'code' => 'jne', 'service' => 'OKE', 'description' => 'Ongkos Kirim Ekonomis', 'cost' => 30000, 'etd' => '4 day'],
+                ],
+            ], 200),
+        ]);
+
+        $options = (new ShippingService)->cost(54102, 1000, 'jne');
+
+        $this->assertSame(['JTR', 'OKE', 'REG', 'YES'], array_column($options, 'service'));
+        $this->assertSame([21000, 30000, 35000, 74000], array_column($options, 'cost'));
+    }
+
+    public function test_tarif_sama_mempertahankan_urutan_asli_api(): void
+    {
+        Http::fake([
+            'api.test/v1/calculate/*' => Http::response([
+                'meta' => ['code' => 200],
+                'data' => [
+                    ['name' => 'JNE', 'code' => 'jne', 'service' => 'REG', 'description' => 'Layanan Reguler', 'cost' => 30000, 'etd' => '3 day'],
+                    ['name' => 'JNE', 'code' => 'jne', 'service' => 'OKE', 'description' => 'Ongkos Kirim Ekonomis', 'cost' => 30000, 'etd' => '4 day'],
+                ],
+            ], 200),
+        ]);
+
+        // Indeks pilihan di UI dipakai selectShipping(), jadi urutan harus deterministik.
+        $options = (new ShippingService)->cost(54102, 1000, 'jne');
+
+        $this->assertSame(['REG', 'OKE'], array_column($options, 'service'));
+    }
+
+    public function test_mode_mock_juga_diurutkan_termurah_dulu(): void
+    {
+        config()->set('services.rajaongkir.mock', true);
+        Http::fake();
+
+        // Mock J&T sengaja tidak berurutan: EZ (1.0x) sebelum ECO (0.8x).
+        $options = (new ShippingService)->cost(17673, 1000, 'jnt');
+
+        $this->assertSame(['ECO', 'EZ'], array_column($options, 'service'));
+        $this->assertLessThan($options[1]['cost'], $options[0]['cost']);
+    }
+
     public function test_origin_belum_dikonfigurasi_melempar_exception(): void
     {
         // String kosong (bukan null) agar tetap terbaca sebagai cache hit tanpa DB.

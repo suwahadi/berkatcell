@@ -102,7 +102,7 @@ class ShippingService
     public function cost(int $destinationId, int $weight, string $courier): array
     {
         if ($this->mock) {
-            return $this->mockCost($weight, $courier);
+            return $this->cheapestFirst($this->mockCost($weight, $courier));
         }
 
         if (blank($this->origin)) {
@@ -111,7 +111,9 @@ class ShippingService
 
         $cacheKey = "shipping:cost:{$this->origin}:{$destinationId}:".max(1, $weight).":{$courier}";
 
-        return Cache::remember($cacheKey, self::COST_TTL, function () use ($destinationId, $weight, $courier): array {
+        // Urutkan di luar Cache::remember agar entri cache lama ikut terurut
+        // tanpa menunggu TTL habis.
+        return $this->cheapestFirst(Cache::remember($cacheKey, self::COST_TTL, function () use ($destinationId, $weight, $courier): array {
             $response = Http::withHeaders(['key' => $this->apiKey])
                 ->asForm()
                 ->post($this->baseUrl.'/calculate/domestic-cost', [
@@ -139,7 +141,21 @@ class ShippingService
                 'cost' => (int) ($c['cost'] ?? 0),
                 'etd' => (string) ($c['etd'] ?? ''),
             ], $response->json('data') ?? []);
-        });
+        }));
+    }
+
+    /**
+     * Termurah lebih dulu. Sort PHP 8 stabil, jadi layanan dengan tarif sama
+     * tetap memakai urutan asli dari API - indeks pilihan di UI deterministik.
+     *
+     * @param  list<array{name: string, code: string, service: string, description: string, cost: int, etd: string}>  $options
+     * @return list<array{name: string, code: string, service: string, description: string, cost: int, etd: string}>
+     */
+    private function cheapestFirst(array $options): array
+    {
+        usort($options, static fn (array $a, array $b): int => $a['cost'] <=> $b['cost']);
+
+        return $options;
     }
 
     /**
