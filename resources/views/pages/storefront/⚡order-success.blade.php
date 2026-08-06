@@ -38,22 +38,26 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
     public function methods(): array
     {
         return [
-            'bca_va' => 'Virtual Account BCA',
+            'gopay' => 'QRIS',
+            'akulaku' => 'Akulaku PayLater',
+            'bsi_va' => 'Virtual Account BSI',
             'bni_va' => 'Virtual Account BNI',
             'bri_va' => 'Virtual Account BRI',
+            'echannel' => 'Mandiri Bill Payment',
             'permata_va' => 'Virtual Account Permata',
-            'gopay' => 'QRIS',
         ];
     }
 
     public function paymentMethods(): array
     {
         return [
-            'bca_va' => ['label' => 'BCA', 'type' => 'Virtual Account', 'brand' => '#005baa'],
+            'gopay' => ['label' => 'QRIS', 'type' => 'Scan QR', 'brand' => '#00aed6'],
+            'akulaku' => ['label' => 'Akulaku', 'type' => 'Cicilan tanpa kartu', 'brand' => '#e02020'],
+            'bsi_va' => ['label' => 'BSI', 'type' => 'Virtual Account', 'brand' => '#00a39d'],
             'bni_va' => ['label' => 'BNI', 'type' => 'Virtual Account', 'brand' => '#ee7203'],
             'bri_va' => ['label' => 'BRI', 'type' => 'Virtual Account', 'brand' => '#00529c'],
+            'echannel' => ['label' => 'Mandiri', 'type' => 'Bill Payment', 'brand' => '#003d79'],
             'permata_va' => ['label' => 'Permata', 'type' => 'Virtual Account', 'brand' => '#00854a'],
-            'gopay' => ['label' => 'QRIS', 'type' => 'Bayar via QRIS', 'brand' => '#2b2b2b'],
         ];
     }
 
@@ -186,6 +190,9 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
                         if (! window.snap) { return; }
                         try {
                             window.snap.pay($event.detail.token, {
+                                // QRIS (GoPay Dynamic): paksa QR, jangan deeplink aplikasi.
+                                // Diabaikan Snap untuk kanal non-GoPay.
+                                gopayMode: 'qr',
                                 onSuccess: () => $wire.refreshStatus(),
                                 onPending: () => $wire.refreshStatus(),
                                 onClose: () => $wire.refreshStatus(),

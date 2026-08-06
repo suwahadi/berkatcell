@@ -239,6 +239,95 @@ class MidtransWebhookServiceTest extends TestCase
         $this->assertSame(PaymentAttemptStatus::SUPERSEDED, $a2->fresh()->status);
     }
 
+    /**
+     * Mandiri Bill Payment (echannel) tidak mengirim va_numbers, melainkan
+     * biller_code + bill_key. Keduanya harus tersimpan dan terbaca untuk invoice.
+     */
+    public function test_echannel_menyimpan_biller_code_dan_bill_key(): void
+    {
+        Queue::fake();
+
+        $order = Order::factory()->create(['grand_total' => 310000]);
+        $attempt = $this->attemptFor($order, method: 'echannel');
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+
+        $this->service->handle($this->notification($attempt, 'settlement', [
+            'payment_type' => 'echannel',
+            'biller_code' => '70012',
+            'bill_key' => '990000000260',
+        ]));
+
+        $attempt->refresh();
+        $this->assertSame(OrderStatus::PAID, $order->fresh()->status);
+        $this->assertSame('70012', $attempt->billerCode());
+        $this->assertSame('990000000260', $attempt->billKey());
+        // echannel tidak punya nomor VA - invoice harus jatuh ke cabang bill key.
+        $this->assertNull($attempt->vaNumber());
+    }
+
+    /**
+     * QRIS GoPay Dynamic: payment_type datang sebagai 'qris' (bukan 'gopay')
+     * dengan acquirer + transaction_type, dan tanpa fraud_status.
+     */
+    public function test_qris_gopay_melunasi_meski_payment_type_qris_tanpa_fraud_status(): void
+    {
+        Queue::fake();
+
+        $order = Order::factory()->create(['grand_total' => 95000]);
+        $attempt = $this->attemptFor($order, method: 'gopay');
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+
+        $this->service->handle($this->notification($attempt, 'settlement', [
+            'payment_type' => 'qris',
+            'acquirer' => 'gopay',
+            'transaction_type' => 'on-us',
+            'fraud_status' => null,
+        ]));
+
+        $attempt->refresh();
+        $this->assertSame(OrderStatus::PAID, $order->fresh()->status);
+        $this->assertSame(PaymentAttemptStatus::PAID, $attempt->status);
+        $this->assertNull($attempt->vaNumber());
+        $this->assertNull($attempt->billKey());
+    }
+
+    public function test_bsi_va_menyimpan_nomor_va_dan_label_bank(): void
+    {
+        Queue::fake();
+
+        $order = Order::factory()->create(['grand_total' => 480000]);
+        $attempt = $this->attemptFor($order, method: 'bsi_va');
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+
+        $this->service->handle($this->notification($attempt, 'settlement', [
+            'payment_type' => 'bank_transfer',
+            'va_numbers' => [['bank' => 'bsi', 'va_number' => '9001234567890']],
+        ]));
+
+        $attempt->refresh();
+        $this->assertSame(OrderStatus::PAID, $order->fresh()->status);
+        $this->assertSame('9001234567890', $attempt->vaNumber());
+        $this->assertSame('BSI', $attempt->bankLabel());
+    }
+
+    public function test_permata_va_terbaca_dari_field_khususnya(): void
+    {
+        Queue::fake();
+
+        $order = Order::factory()->create(['grand_total' => 275000]);
+        $attempt = $this->attemptFor($order, method: 'permata_va');
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+
+        $this->service->handle($this->notification($attempt, 'settlement', [
+            'payment_type' => 'bank_transfer',
+            'permata_va_number' => '8562000012345678',
+        ]));
+
+        $attempt->refresh();
+        $this->assertSame('8562000012345678', $attempt->vaNumber());
+        $this->assertSame('PERMATA', $attempt->bankLabel());
+    }
+
     public function test_gross_amount_tidak_cocok_tidak_melunasi(): void
     {
         $order = Order::factory()->create(['grand_total' => 220000]);

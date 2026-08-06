@@ -12,12 +12,13 @@ use App\Models\OrderActivity;
 class OrderActivityService
 {
     private const METHOD_LABELS = [
+        'gopay' => 'QRIS',
+        'akulaku' => 'Akulaku PayLater',
+        'bsi_va' => 'Virtual Account BSI',
         'bni_va' => 'Virtual Account BNI',
         'bri_va' => 'Virtual Account BRI',
-        'bca_va' => 'Virtual Account BCA',
+        'echannel' => 'Mandiri Bill Payment',
         'permata_va' => 'Virtual Account Permata',
-        'gopay' => 'GoPay',
-        'qris' => 'QRIS',
     ];
 
     public function __construct(

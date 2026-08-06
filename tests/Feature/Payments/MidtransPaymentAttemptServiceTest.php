@@ -9,6 +9,7 @@ use App\Enums\PaymentAttemptStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Models\Product;
 use App\Services\Payments\Midtrans\MidtransPaymentAttemptService;
 use App\Services\SettingService;
 use Illuminate\Database\QueryException;
@@ -94,6 +95,84 @@ class MidtransPaymentAttemptServiceTest extends TestCase
 
         // Cancel best effort ke Midtrans untuk attempt lama.
         Http::assertSent(fn ($request) => str_contains($request->url(), '/cancel'));
+    }
+
+    public function test_daftar_metode_persis_tujuh_kanal_yang_diaktifkan(): void
+    {
+        $this->assertSame(
+            ['gopay', 'akulaku', 'bsi_va', 'bni_va', 'bri_va', 'echannel', 'permata_va'],
+            MidtransPaymentAttemptService::supportedMethods(),
+        );
+
+        // Elemen pertama jadi default terpilih di halaman invoice.
+        $this->assertSame('gopay', MidtransPaymentAttemptService::supportedMethods()[0]);
+    }
+
+    /**
+     * Setiap kanal harus terkirim ke Snap sebagai nilai enabled_payments yang
+     * dikenal Midtrans: 'gopay' untuk QRIS GoPay Dynamic, 'echannel' untuk Mandiri.
+     */
+    public function test_setiap_metode_dikirim_sebagai_enabled_payments_yang_benar(): void
+    {
+        $this->fakeSnapSuccess();
+
+        foreach (MidtransPaymentAttemptService::supportedMethods() as $method) {
+            $order = Order::factory()->create();
+
+            $attempt = $this->service->createOrReuseActiveAttempt($order, $method);
+
+            $this->assertSame($method, $attempt->payment_method, "payment_method {$method}");
+            $this->assertSame(
+                [MidtransPaymentAttemptService::METHOD_MAP[$method]],
+                $attempt->snap_request_payload['enabled_payments'],
+                "enabled_payments {$method}",
+            );
+        }
+    }
+
+    public function test_kanal_yang_dinonaktifkan_ditolak(): void
+    {
+        $this->fakeSnapSuccess();
+
+        foreach (['bca_va', 'qris', 'shopeepay', 'credit_card'] as $method) {
+            $order = Order::factory()->create();
+
+            try {
+                $this->service->createOrReuseActiveAttempt($order, $method);
+                $this->fail("Metode {$method} seharusnya ditolak.");
+            } catch (BusinessRuleException) {
+                // diharapkan.
+            }
+        }
+
+        $this->assertDatabaseCount('payment_attempts', 0);
+    }
+
+    public function test_item_details_dijumlah_persis_sama_dengan_gross_amount(): void
+    {
+        $this->fakeSnapSuccess();
+
+        $product = Product::factory()->create(['name' => 'Samsung Galaxy A16 5G']);
+        $order = Order::factory()->create([
+            'subtotal' => 200000,
+            'discount_amount' => 20000,
+            'shipping_cost' => 15000,
+            'grand_total' => 195000,
+        ]);
+        $order->items()->create([
+            'product_id' => $product->id,
+            'price' => 100000,
+            'quantity' => 2,
+            'total' => 200000,
+        ]);
+
+        $attempt = $this->service->createOrReuseActiveAttempt($order, 'akulaku');
+
+        $items = $attempt->snap_request_payload['item_details'];
+        $sum = array_sum(array_map(fn (array $item): int => $item['price'] * $item['quantity'], $items));
+
+        $this->assertSame(195000, $sum);
+        $this->assertSame(195000, $attempt->snap_request_payload['transaction_details']['gross_amount']);
     }
 
     public function test_metode_tidak_didukung_ditolak(): void

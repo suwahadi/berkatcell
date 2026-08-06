@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentAttemptStatus;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Services\Payments\Midtrans\MidtransPaymentAttemptService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -101,6 +102,51 @@ class MidtransInvoicePageTest extends TestCase
 
         $this->assertSame(PaymentAttemptStatus::SUPERSEDED, $a1->fresh()->status);
         $this->assertSame('bri_va', $order->fresh()->activePaymentAttempt->payment_method);
+    }
+
+    /**
+     * Daftar metode di UI harus persis sama dengan yang divalidasi service:
+     * kalau menyimpang, tombol yang tampil bisa ditolak saat diklik.
+     */
+    public function test_daftar_metode_ui_konsisten_dengan_service(): void
+    {
+        $order = Order::factory()->create();
+        $page = Livewire::test(self::COMPONENT, ['order' => $order])->instance();
+
+        $this->assertSame(MidtransPaymentAttemptService::supportedMethods(), array_keys($page->paymentMethods()));
+        $this->assertSame(MidtransPaymentAttemptService::supportedMethods(), array_keys($page->methods()));
+    }
+
+    public function test_invoice_menawarkan_tujuh_kanal_dan_bukan_yang_lain(): void
+    {
+        $order = Order::factory()->create();
+
+        Livewire::test(self::COMPONENT, ['order' => $order])
+            ->assertSee('QRIS')
+            ->assertSee('Akulaku')
+            ->assertSee('BSI')
+            ->assertSee('BNI')
+            ->assertSee('BRI')
+            ->assertSee('Mandiri')
+            ->assertSee('Permata')
+            ->assertDontSee('BCA')
+            ->assertDontSee('ShopeePay');
+    }
+
+    public function test_pay_dengan_mandiri_echannel_membuat_attempt(): void
+    {
+        $order = Order::factory()->create();
+
+        Livewire::test(self::COMPONENT, ['order' => $order])
+            ->set('payment_method', 'echannel')
+            ->call('pay')
+            ->assertDispatched('snap-pay', token: 'snap-token-abc');
+
+        $this->assertDatabaseHas('payment_attempts', [
+            'order_id' => $order->id,
+            'payment_method' => 'echannel',
+            'status' => PaymentAttemptStatus::PENDING->value,
+        ]);
     }
 
     public function test_refresh_status_melunasi_saat_settlement(): void
