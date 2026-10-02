@@ -36,5 +36,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="NICEPAY_ENABLED" value="false"/>
+        <env name="NICEPAY_ADMIN_ONLY" value="true"/>
+        <env name="NICEPAY_IMID" value=""/>
+        <env name="NICEPAY_MERCHANT_KEY" value=""/>
     </php>
 </phpunit>
