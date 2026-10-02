@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Payment\MidtransNotificationController;
+use App\Http\Controllers\Payment\NicepayNotificationController;
 use App\Http\Controllers\Payment\PaymentRedirectController;
 use App\Models\Page;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,9 @@ Route::post('/payments/midtrans/notification', MidtransNotificationController::c
 
 Route::get('/payments/midtrans/finish', [PaymentRedirectController::class, 'finish'])
     ->name('payments.midtrans.finish');
+
+Route::post('/payments/nicepay/notification', NicepayNotificationController::class)
+    ->name('payments.nicepay.notification');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('dashboard', 'pages::dashboard.index')->name('dashboard');

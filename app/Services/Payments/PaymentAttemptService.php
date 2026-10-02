@@ -11,12 +11,14 @@ use App\Models\Order;
 use App\Models\PaymentAttempt;
 use App\Services\OrderActivityService;
 use App\Services\Payments\Midtrans\MidtransPaymentAttemptService;
+use App\Services\Payments\Nicepay\NicepayPaylaterService;
 use Illuminate\Support\Facades\DB;
 
 class PaymentAttemptService
 {
     public function __construct(
         private readonly MidtransPaymentAttemptService $midtrans,
+        private readonly NicepayPaylaterService $nicepay,
         private readonly PaymentSettlementService $settlement,
         private readonly OrderActivityService $activities,
     ) {}
@@ -99,7 +101,8 @@ class PaymentAttemptService
         }
 
         match ($attempt->provider) {
-            PaymentMethods::MIDTRANS => $this->midtrans->sync($attempt),
+            PaymentMethods::NICEPAY => $this->nicepay->sync($attempt),
+            default => $this->midtrans->sync($attempt),
         };
     }
 

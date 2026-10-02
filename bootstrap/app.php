@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Alias middleware peran: 'admin' menjaga seluruh grup /admin.
         $middleware->alias([
-            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'admin' => EnsureUserIsAdmin::class,
         ]);
 
         // Percayai header proxy (ngrok/load balancer) agar Laravel mendeteksi HTTPS
@@ -27,11 +28,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_PROTO,
         );
 
-        // Webhook Midtrans adalah POST server-to-server tanpa token CSRF.
+        // Webhook dan callback pembayaran adalah POST dari luar tanpa token CSRF.
         // Dikecualikan di sini (cara Laravel 11+) agar tahan terhadap penggantian
         // nama kelas middleware CSRF (VerifyCsrfToken -> ValidateCsrfToken).
         $middleware->validateCsrfTokens(except: [
             'payments/midtrans/notification',
+            'payments/nicepay/notification',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

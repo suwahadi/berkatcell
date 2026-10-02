@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentAttemptStatus;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Services\Payments\PaymentMethods;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -76,5 +77,38 @@ class ReconcilePaymentsTest extends TestCase
 
         Http::assertNothingSent();
         $this->assertSame(OrderStatus::PENDING, $order->fresh()->status);
+    }
+
+    public function test_attempt_nicepay_pending_lama_dilunasi_dari_inquiry(): void
+    {
+        config([
+            'services.nicepay.enabled' => true,
+            'services.nicepay.is_production' => false,
+            'services.nicepay.imid' => 'TESTIMID01',
+            'services.nicepay.merchant_key' => 'test-merchant-key',
+        ]);
+
+        $order = Order::factory()->create(['grand_total' => 175000]);
+        $attempt = $this->pendingAttempt($order, 30);
+        $attempt->update([
+            'provider' => PaymentMethods::NICEPAY,
+            'payment_method' => 'indodana',
+            'midtrans_transaction_id' => 'TESTIMID0106202610021015001234',
+            'expired_at' => now()->addDay(),
+        ]);
+
+        Http::fake([
+            '*/nicepay/direct/v2/inquiry' => Http::response([
+                'resultCd' => '0000',
+                'resultMsg' => 'SUCCESS',
+                'amt' => '175000',
+                'status' => '0',
+            ], 200),
+        ]);
+
+        $this->artisan('payments:reconcile')->assertSuccessful();
+
+        $this->assertSame(OrderStatus::PAID, $order->fresh()->status);
+        $this->assertSame(PaymentAttemptStatus::PAID, $attempt->fresh()->status);
     }
 }
