@@ -17,7 +17,17 @@ Fitur ini mati secara default. Selama `NICEPAY_ENABLED=false`, pelanggan tidak m
 Jalankan dari folder aplikasi di server, berurutan.
 
 1. Cadangkan database.
-2. Ambil kode terbaru (`git pull`, atau unggah berkas).
+2. Ambil kode terbaru (unggah berkas, atau lewat git).
+
+Riwayat `main` di GitHub ditulis ulang pada 2 Oktober 2026 untuk merapikan pesan commit; isi kodenya tidak berubah. Clone yang dibuat sebelum itu tidak bisa `git pull` biasa. Pastikan dulu tidak ada perubahan lokal yang belum disimpan, lalu samakan dengan GitHub:
+
+```bash
+git status
+git fetch origin
+git reset --hard origin/main
+```
+
+`git reset --hard` membuang perubahan pada file yang ter-track. File yang tidak ter-track seperti `.env` dan isi `storage/` tidak tersentuh.
 3. Pasang dependensi:
 
 ```bash
