@@ -45,11 +45,10 @@ class PaymentSettlementService
                 return;
             }
 
-            Log::warning('Pembayaran ganda dari attempt lain pada order yang sudah lunas.', [
+            Log::warning(ucfirst($attempt->provider).': pembayaran ganda dari attempt lain pada order yang sudah lunas.', [
                 'order_id' => $order->id,
                 'attempt_id' => $attempt->id,
-                'provider' => $attempt->provider,
-                'reference' => $attempt->midtrans_order_id,
+                'midtrans_order_id' => $attempt->midtrans_order_id,
             ]);
 
             $event?->update([
@@ -61,11 +60,11 @@ class PaymentSettlementService
         }
 
         if ($paidAmount !== (int) $order->grand_total) {
-            Log::warning('Nominal pembayaran tidak cocok dengan total order.', [
+            Log::warning(ucfirst($attempt->provider).': nominal pembayaran tidak cocok dengan total order.', [
                 'order_id' => $order->id,
                 'attempt_id' => $attempt->id,
-                'provider' => $attempt->provider,
-                'paid_amount' => $paidAmount,
+                'midtrans_order_id' => $attempt->midtrans_order_id,
+                'gross_amount' => $paidAmount,
                 'grand_total' => $order->grand_total,
             ]);
 
@@ -139,6 +138,31 @@ class PaymentSettlementService
         $event?->update([
             'processing_status' => 'processed',
             'notes' => 'Status gagal diproses: '.$reason,
+        ]);
+    }
+
+    /**
+     * Void atau refund di penyedia tidak mengubah status pesanan; admin yang memutuskan
+     * tindak lanjutnya, jadi kejadiannya dicatat sekali di aktivitas pesanan.
+     */
+    public function reversed(Order $order, PaymentAttempt $attempt, string $reason, ?PaymentWebhookEvent $event = null): void
+    {
+        if ($attempt->status !== PaymentAttemptStatus::CANCELLED) {
+            Log::warning(ucfirst($attempt->provider).': transaksi di-void atau di-refund; perlu ditinjau admin.', [
+                'order_id' => $order->id,
+                'attempt_id' => $attempt->id,
+                'midtrans_order_id' => $attempt->midtrans_order_id,
+                'reason' => $reason,
+            ]);
+
+            $attempt->update(['status' => PaymentAttemptStatus::CANCELLED]);
+
+            $this->activities->paymentReversed($order, $reason, PaymentMethods::actorFor($attempt->provider));
+        }
+
+        $event?->update([
+            'processing_status' => 'processed',
+            'notes' => 'Transaksi void atau refund di penyedia. Perlu ditinjau.',
         ]);
     }
 

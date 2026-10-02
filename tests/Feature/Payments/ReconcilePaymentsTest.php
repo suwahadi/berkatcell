@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\PaymentAttempt;
 use App\Models\PaymentWebhookEvent;
 use App\Services\Payments\PaymentMethods;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -156,5 +157,16 @@ class ReconcilePaymentsTest extends TestCase
         $this->assertSame(OrderStatus::PAID, $order->fresh()->status);
         $this->assertSame(PaymentAttemptStatus::PAID, $attempt->fresh()->status);
         $this->assertSame('processed', $event->fresh()->processing_status);
+    }
+
+    public function test_jadwal_rekonsiliasi_tidak_tumpang_tindih(): void
+    {
+        $this->artisan('schedule:list')->assertSuccessful();
+
+        $event = collect(app(Schedule::class)->events())
+            ->first(fn ($event) => str_contains((string) $event->command, 'payments:reconcile'));
+
+        $this->assertNotNull($event);
+        $this->assertTrue($event->withoutOverlapping);
     }
 }

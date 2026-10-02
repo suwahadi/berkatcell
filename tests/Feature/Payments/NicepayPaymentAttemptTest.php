@@ -215,4 +215,20 @@ class NicepayPaymentAttemptTest extends TestCase
         $this->assertSame(PaymentAttemptStatus::SUPERSEDED, $first->fresh()->status);
         $this->assertSame($order->order_number.'-A2', $second->midtrans_order_id);
     }
+
+    public function test_indodana_ditolak_service_bila_nominal_di_luar_batas(): void
+    {
+        $this->fakeGateways();
+        $order = Order::factory()->create(['grand_total' => 5000]);
+
+        try {
+            $this->service->createOrReuseActiveAttempt($order, PaymentMethods::INDODANA);
+            $this->fail('Seharusnya melempar BusinessRuleException.');
+        } catch (BusinessRuleException $e) {
+            $this->assertSame('Metode pembayaran tidak tersedia untuk pesanan ini.', $e->getMessage());
+        }
+
+        Http::assertNothingSent();
+        $this->assertDatabaseCount('payment_attempts', 0);
+    }
 }

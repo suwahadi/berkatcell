@@ -67,13 +67,31 @@ class PaymentMethods
             && filled(config('services.nicepay.merchant_key'));
     }
 
+    /**
+     * Syarat yang melekat pada pesanan, tanpa melihat siapa yang membuka halamannya.
+     * Dipakai PaymentAttemptService sebelum membuat tagihan baru.
+     */
+    public static function eligible(Order $order, string $method): bool
+    {
+        return match (self::providerFor($method)) {
+            self::NICEPAY => self::indodanaEligible($order),
+            self::MIDTRANS => true,
+            default => false,
+        };
+    }
+
     private static function indodanaAvailable(Order $order, ?User $user): bool
     {
-        if (! self::nicepayConfigured()) {
+        if (config('services.nicepay.admin_only') && ! $user?->isAdmin()) {
             return false;
         }
 
-        if (config('services.nicepay.admin_only') && ! $user?->isAdmin()) {
+        return self::indodanaEligible($order);
+    }
+
+    private static function indodanaEligible(Order $order): bool
+    {
+        if (! self::nicepayConfigured()) {
             return false;
         }
 

@@ -48,7 +48,7 @@ class NicepayClient
         }
 
         foreach (['tXid', 'amt', 'merchantToken'] as $key) {
-            if (blank($payload[$key] ?? null)) {
+            if (! is_scalar($payload[$key] ?? null) || blank($payload[$key])) {
                 return false;
             }
         }

@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\PaymentAttempt;
 use App\Services\Payments\PaymentAttemptService;
 use App\Services\Payments\PaymentMethods;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -90,10 +91,14 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
     protected function startPayment(PaymentAttemptService $service, string $method): void
     {
         try {
-            $attempt = Cache::lock('order-pay:'.$this->order->id, 10)
+            $attempt = Cache::lock('order-pay:'.$this->order->id, 60)
                 ->block(5, fn () => $service->createOrReuseActiveAttempt($this->order, $method));
         } catch (BusinessRuleException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
+
+            return;
+        } catch (LockTimeoutException) {
+            Flux::toast(variant: 'danger', text: 'Pembayaran sedang diproses. Tunggu sebentar lalu coba lagi.');
 
             return;
         }

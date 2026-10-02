@@ -10,6 +10,7 @@ use App\Models\PaymentAttempt;
 use App\Models\User;
 use App\Services\Payments\PaymentMethods;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
@@ -177,5 +178,19 @@ class NicepayInvoicePageTest extends TestCase
             ->call('pay')
             ->assertDispatched('snap-pay', token: 'snap-token-abc')
             ->assertNoRedirect();
+    }
+
+    public function test_bayar_saat_pembayaran_lain_sedang_diproses_tidak_error(): void
+    {
+        $order = $this->order();
+        Cache::lock('order-pay:'.$order->id, 60)->get();
+
+        Livewire::test(self::COMPONENT, ['order' => $order])
+            ->set('payment_method', 'bni_va')
+            ->call('pay')
+            ->assertNotDispatched('snap-pay')
+            ->assertNoRedirect();
+
+        $this->assertDatabaseCount('payment_attempts', 0);
     }
 }

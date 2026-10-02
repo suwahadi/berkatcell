@@ -13,6 +13,7 @@ use App\Services\Payments\PaymentMethods;
 use App\Services\Payments\PaymentSettlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -142,5 +143,20 @@ class PaymentSettlementServiceTest extends TestCase
         $this->assertSame(OrderStatus::CANCELLED, $order->fresh()->status);
         $this->assertSame(PaymentAttemptStatus::CANCELLED, $attempt->fresh()->status);
         Http::assertSent(fn ($request) => str_contains($request->url(), 'midtrans.com/v2/'.$attempt->midtrans_order_id.'/cancel'));
+    }
+
+    public function test_log_nominal_tak_cocok_menyebut_penyedia(): void
+    {
+        Log::spy();
+        $order = Order::factory()->create(['grand_total' => 150000]);
+        $attempt = $this->attemptFor($order);
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+
+        $this->service->paid($order->fresh(), $attempt, 149999, 'Tes (otomatis)');
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context = []): bool => $message === 'Midtrans: nominal pembayaran tidak cocok dengan total order.'
+                && ($context['midtrans_order_id'] ?? null) === $attempt->midtrans_order_id)
+            ->once();
     }
 }

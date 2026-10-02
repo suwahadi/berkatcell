@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentAttemptStatus;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Models\PaymentWebhookEvent;
 use App\Services\Payments\Nicepay\NicepayPaylaterService;
 use App\Services\Payments\PaymentMethods;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -242,5 +243,75 @@ class NicepayStatusSyncTest extends TestCase
         Log::shouldHaveReceived('warning')
             ->withArgs(fn (string $message, array $context = []): bool => str_contains($message, 'inquiry') && ($context['resultCd'] ?? null) === '9999')
             ->once();
+    }
+
+    public function test_event_yang_sudah_diproses_tidak_ditimpa(): void
+    {
+        $order = Order::factory()->paid()->create(['grand_total' => 150000]);
+        $attempt = $this->nicepayAttempt($order, ['status' => PaymentAttemptStatus::PAID]);
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+        $event = PaymentWebhookEvent::query()->create([
+            'provider' => PaymentMethods::NICEPAY,
+            'midtrans_order_id' => $attempt->midtrans_order_id,
+            'event_hash' => 'hash-sudah-diproses',
+            'processing_status' => 'processed',
+            'notes' => 'Order ditandai lunas.',
+            'payload' => ['referenceNo' => $attempt->midtrans_order_id],
+        ]);
+        $stale = PaymentWebhookEvent::query()->findOrFail($event->id);
+        $stale->processing_status = 'received';
+        $this->fakeInquiry('0');
+
+        $this->service->reprocessEvent($stale);
+
+        $this->assertSame('processed', $event->fresh()->processing_status);
+        $this->assertSame('Order ditandai lunas.', $event->fresh()->notes);
+    }
+
+    public function test_inquiry_belum_bayar_tidak_menimpa_attempt_yang_sudah_lunas(): void
+    {
+        $order = Order::factory()->paid()->create(['grand_total' => 150000]);
+        $attempt = $this->nicepayAttempt($order, [
+            'status' => PaymentAttemptStatus::PAID,
+            'midtrans_transaction_status' => '0',
+        ]);
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+        $this->fakeInquiry('3');
+
+        $this->service->sync($attempt);
+
+        $this->assertSame('0', $attempt->fresh()->midtrans_transaction_status);
+        $this->assertSame(PaymentAttemptStatus::PAID, $attempt->fresh()->status);
+    }
+
+    public function test_status_gagal_pada_attempt_yang_sudah_digantikan_diabaikan(): void
+    {
+        $order = Order::factory()->create();
+        $attempt = $this->nicepayAttempt($order, ['status' => PaymentAttemptStatus::SUPERSEDED]);
+        $this->fakeInquiry('8');
+
+        $this->service->sync($attempt);
+
+        $this->assertSame(PaymentAttemptStatus::SUPERSEDED, $attempt->fresh()->status);
+        $this->assertDatabaseMissing('order_activities', [
+            'order_id' => $order->id,
+            'type' => 'pembayaran_gagal',
+        ]);
+    }
+
+    public function test_void_dicatat_sekali_di_aktivitas_pesanan(): void
+    {
+        $order = Order::factory()->paid()->create();
+        $attempt = $this->nicepayAttempt($order, ['status' => PaymentAttemptStatus::PAID]);
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+        $this->fakeInquiry('1');
+
+        $this->service->sync($attempt);
+        $this->service->sync($attempt->fresh());
+
+        $this->assertSame(1, $order->activities()
+            ->where('type', 'pembayaran_gagal')
+            ->where('actor', 'Indodana via Nicepay (otomatis)')
+            ->count());
     }
 }

@@ -23,12 +23,15 @@ Route::get('/payments/midtrans/finish', [PaymentRedirectController::class, 'fini
     ->name('payments.midtrans.finish');
 
 Route::post('/payments/nicepay/notification', NicepayNotificationController::class)
+    ->middleware('throttle:120,1')
     ->name('payments.nicepay.notification');
 
 Route::get('/payments/nicepay/pay/{order:uuid}', [NicepayPaymentController::class, 'redirect'])
+    ->middleware('throttle:30,1')
     ->name('payments.nicepay.pay');
 
 Route::match(['get', 'post'], '/payments/nicepay/callback', [NicepayPaymentController::class, 'callback'])
+    ->middleware('throttle:30,1')
     ->name('payments.nicepay.callback');
 
 Route::middleware(['auth', 'verified'])->group(function () {

@@ -106,18 +106,45 @@ class NicepayPaylaterService
         }
 
         DB::transaction(function () use ($attempt, $inquiry, $event): void {
+            $lockedEvent = $event === null
+                ? null
+                : PaymentWebhookEvent::query()->whereKey($event->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedEvent !== null && in_array($lockedEvent->processing_status, self::TERMINAL_EVENT_STATUSES, true)) {
+                return;
+            }
+
             $locked = PaymentAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
             $order = Order::query()->whereKey($locked->order_id)->lockForUpdate()->firstOrFail();
+
+            if ($this->isStaleUnpaidResult($locked, $inquiry)) {
+                $lockedEvent?->update([
+                    'processing_status' => 'ignored',
+                    'notes' => 'Hasil inquiry belum bayar diabaikan; attempt sudah lunas.',
+                ]);
+
+                return;
+            }
 
             $locked->update([
                 'midtrans_transaction_status' => (string) $inquiry['status'],
                 'latest_notification_payload' => $inquiry,
             ]);
 
-            $this->route($order, $locked, $inquiry, $event);
+            $this->route($order, $locked, $inquiry, $lockedEvent);
         });
 
         return true;
+    }
+
+    /**
+     * Inquiry diambil sebelum baris dikunci, jadi hasil "belum bayar" bisa datang
+     * setelah permintaan lain melunasi attempt yang sama.
+     */
+    private function isStaleUnpaidResult(PaymentAttempt $attempt, array $inquiry): bool
+    {
+        return $attempt->status === PaymentAttemptStatus::PAID
+            && in_array((string) $inquiry['status'], ['3', '9'], true);
     }
 
     private function route(Order $order, PaymentAttempt $attempt, array $inquiry, ?PaymentWebhookEvent $event): void
@@ -158,24 +185,22 @@ class NicepayPaylaterService
         }
 
         if ($status === '8') {
+            if (! $attempt->isOpen()) {
+                $event?->update([
+                    'processing_status' => 'ignored',
+                    'notes' => 'Gagal pada attempt yang sudah tidak terbuka diabaikan.',
+                ]);
+
+                return;
+            }
+
             $this->settlement->failed($order, $attempt, PaymentAttemptStatus::FAILED, 'failure', $event);
 
             return;
         }
 
         if (in_array($status, ['1', '2'], true)) {
-            Log::warning('Nicepay: transaksi di-void atau di-refund; perlu ditinjau admin.', [
-                'order_id' => $order->id,
-                'attempt_id' => $attempt->id,
-                'status' => $status,
-            ]);
-
-            $attempt->update(['status' => PaymentAttemptStatus::CANCELLED]);
-
-            $event?->update([
-                'processing_status' => 'processed',
-                'notes' => 'Transaksi void atau refund di Nicepay. Perlu ditinjau.',
-            ]);
+            $this->settlement->reversed($order, $attempt, $status === '1' ? 'void' : 'refund', $event);
 
             return;
         }
@@ -188,24 +213,26 @@ class NicepayPaylaterService
 
     private function storeEvent(array $payload): PaymentWebhookEvent
     {
+        $text = fn (string $key): string => is_scalar($payload[$key] ?? null) ? (string) $payload[$key] : '';
+
         $eventHash = hash('sha256', implode('|', [
             PaymentMethods::NICEPAY,
-            $payload['referenceNo'] ?? '',
-            $payload['tXid'] ?? '',
-            $payload['status'] ?? '',
-            $payload['amt'] ?? '',
-            $payload['merchantToken'] ?? '',
+            $text('referenceNo'),
+            $text('tXid'),
+            $text('status'),
+            $text('amt'),
+            $text('merchantToken'),
         ]));
 
         return PaymentWebhookEvent::query()->firstOrCreate(
             ['event_hash' => $eventHash],
             [
                 'provider' => PaymentMethods::NICEPAY,
-                'midtrans_order_id' => (string) ($payload['referenceNo'] ?? ''),
-                'transaction_id' => $payload['tXid'] ?? null,
-                'transaction_status' => $payload['status'] ?? null,
-                'gross_amount' => $payload['amt'] ?? null,
-                'signature_key' => $payload['merchantToken'] ?? null,
+                'midtrans_order_id' => $text('referenceNo'),
+                'transaction_id' => $text('tXid') ?: null,
+                'transaction_status' => $text('status') ?: null,
+                'gross_amount' => $text('amt') ?: null,
+                'signature_key' => $text('merchantToken') ?: null,
                 'payload' => $payload,
                 'processing_status' => 'received',
             ]

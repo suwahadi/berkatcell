@@ -62,6 +62,10 @@ class PaymentAttemptService
                 return $activeAttempt;
             }
 
+            if (! PaymentMethods::eligible($lockedOrder, $paymentMethod)) {
+                throw new BusinessRuleException('Metode pembayaran tidak tersedia untuk pesanan ini.');
+            }
+
             if ($activeAttempt?->isOpen()) {
                 $activeAttempt->update(['status' => PaymentAttemptStatus::SUPERSEDED]);
                 $superseded = $activeAttempt;

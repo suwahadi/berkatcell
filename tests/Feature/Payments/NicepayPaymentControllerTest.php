@@ -193,4 +193,23 @@ class NicepayPaymentControllerTest extends TestCase
         $this->get(route('payments.nicepay.pay', ['order' => $order->uuid]))
             ->assertRedirect(route('checkout.success', ['order' => $order->uuid]));
     }
+
+    public function test_callback_dibatasi_lajunya(): void
+    {
+        foreach (range(1, 30) as $ignored) {
+            $this->get(route('payments.nicepay.callback', ['referenceNo' => 'TIDAK-ADA-A1']))
+                ->assertRedirect(route('home'));
+        }
+
+        $this->get(route('payments.nicepay.callback', ['referenceNo' => 'TIDAK-ADA-A1']))
+            ->assertStatus(429);
+    }
+
+    public function test_callback_dengan_referensi_berbentuk_array_ke_beranda(): void
+    {
+        $this->get(route('payments.nicepay.callback', ['referenceNo' => ['x', 'y']]))
+            ->assertRedirect(route('home'));
+
+        Http::assertNothingSent();
+    }
 }

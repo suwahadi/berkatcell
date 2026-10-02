@@ -88,6 +88,17 @@ class OrderActivityService
         );
     }
 
+    public function paymentReversed(Order $order, string $reason, ?string $actor = null): void
+    {
+        $this->log(
+            $order,
+            OrderActivityType::PAYMENT_FAILED,
+            $actor ?? PaymentMethods::actorFor(PaymentMethods::MIDTRANS),
+            'Pembayaran dibatalkan di penyedia ('.$reason.'). Perlu ditinjau admin.',
+            ['transaction_status' => $reason],
+        );
+    }
+
     private function log(Order $order, OrderActivityType $type, ?string $actor, string $description, array $meta = []): OrderActivity
     {
         return $order->activities()->create([

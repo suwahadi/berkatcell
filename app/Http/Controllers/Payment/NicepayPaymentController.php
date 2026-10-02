@@ -43,11 +43,15 @@ class NicepayPaymentController extends Controller
 
     public function callback(Request $request, NicepayPaylaterService $service): RedirectResponse
     {
-        $attempt = PaymentAttempt::query()
-            ->with('order:id,uuid')
-            ->where('provider', PaymentMethods::NICEPAY)
-            ->where('midtrans_order_id', (string) $request->input('referenceNo', ''))
-            ->first();
+        $reference = $request->input('referenceNo');
+
+        $attempt = is_string($reference)
+            ? PaymentAttempt::query()
+                ->with('order:id,uuid')
+                ->where('provider', PaymentMethods::NICEPAY)
+                ->where('midtrans_order_id', $reference)
+                ->first()
+            : null;
 
         if (! $attempt?->order) {
             return redirect()->route('home');

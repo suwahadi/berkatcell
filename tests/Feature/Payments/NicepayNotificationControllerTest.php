@@ -187,4 +187,17 @@ class NicepayNotificationControllerTest extends TestCase
             'processing_status' => 'received',
         ]);
     }
+
+    public function test_field_berbentuk_array_ditolak_403_bukan_error(): void
+    {
+        $response = $this->post(route('payments.nicepay.notification'), [
+            'tXid' => ['x'],
+            'referenceNo' => ['y'],
+            'amt' => ['1'],
+            'merchantToken' => 'palsu',
+        ]);
+
+        $response->assertForbidden();
+        Http::assertNothingSent();
+    }
 }
