@@ -31,3 +31,4 @@ yarn-error.log
 /graphify-out
 /.playwright-mcp
 /CLAUDE.md
+watch-specs.ps1
