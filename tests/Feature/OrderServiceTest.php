@@ -13,6 +13,7 @@ use App\Models\Variant;
 use App\Models\Voucher;
 use App\Services\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class OrderServiceTest extends TestCase
@@ -21,9 +22,14 @@ class OrderServiceTest extends TestCase
 
     private OrderService $service;
 
+    /**
+     * Checkout dan pelunasan men-dispatch SendBrevoEmail. Tanpa Queue::fake() job itu
+     * jalan sinkron dan memanggil API Brevo sungguhan dari dalam tes.
+     */
     protected function setUp(): void
     {
         parent::setUp();
+        Queue::fake();
         $this->service = app(OrderService::class);
     }
 
@@ -204,7 +210,6 @@ class OrderServiceTest extends TestCase
         $this->expectException(BusinessRuleException::class);
         $this->expectExceptionMessage('pilih varian');
 
-        // Payload tanpa variant_id untuk produk bervarian.
         $this->service->checkout($this->payload($product, 1), 'key-novariant');
     }
 
