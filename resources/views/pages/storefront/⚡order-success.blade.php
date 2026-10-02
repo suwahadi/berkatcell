@@ -100,6 +100,12 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
 
         $this->order->refresh();
 
+        if ($attempt->provider === PaymentMethods::NICEPAY) {
+            $this->redirect(route('payments.nicepay.pay', ['order' => $this->order->uuid]));
+
+            return;
+        }
+
         if (blank($attempt->snap_token)) {
             Flux::toast(variant: 'danger', text: 'Gagal memuat halaman pembayaran. Coba lagi.');
 
@@ -211,8 +217,12 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
                             <div class="mt-4 space-y-3 text-sm">
                                 <div class="flex justify-between">
                                     <span class="text-ink/55">Metode</span>
-                                    <span class="font-medium text-ink">{{ $this->methods()[$attempt->payment_method] ?? strtoupper($attempt->payment_method) }}</span>
+                                    <span class="font-medium text-ink">{{ \App\Services\Payments\PaymentMethods::name($attempt->payment_method) }}</span>
                                 </div>
+
+                                @if ($attempt->provider === \App\Services\Payments\PaymentMethods::NICEPAY)
+                                    <p class="text-xs text-ink/70">Tenor cicilan dipilih di halaman Indodana.</p>
+                                @endif
 
                                 @if ($attempt->vaNumber())
                                     <div class="flex items-center justify-between">
@@ -276,7 +286,7 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
 
                             @if ($attempt)
                                 <p class="mt-1 text-xs text-gold-deep">
-                                    Memilih metode baru akan membatalkan tagihan {{ $this->methods()[$attempt->payment_method] ?? '' }} yang lama.
+                                    Memilih metode baru akan membatalkan tagihan {{ \App\Services\Payments\PaymentMethods::name($attempt->payment_method) }} yang lama.
                                 </p>
                             @endif
 
