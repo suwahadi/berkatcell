@@ -95,9 +95,11 @@ class NicepayRegistrationPayload
     }
 
     /**
-     * Nicepay mensyaratkan amt = barang + ongkir - diskon. Bila rincian tidak
-     * cocok dengan grand_total atau melebihi 4.000 karakter, dikirim satu baris
-     * senilai total supaya registrasi tidak ditolak.
+     * Nicepay menjumlahkan semua baris (harga satuan x jumlah) dan menolak registrasi
+     * bila hasilnya berbeda dari amt. Baris ongkir diterima, tetapi untuk Indodana baris
+     * diskon ditolak sandbox (nilai positif: 9907, nilai negatif: 1002), jadi pesanan
+     * berdiskon dikirim sebagai satu baris senilai total. Hal yang sama berlaku bila
+     * rincian tidak cocok dengan grand_total atau melebihi 4.000 karakter.
      */
     private function cart(Order $order): array
     {
@@ -122,39 +124,36 @@ class NicepayRegistrationPayload
             $sum += $shipping;
         }
 
-        $discount = min((int) $order->discount_amount, (int) $order->subtotal);
-
-        if ($discount > 0) {
-            $items[] = $this->cartLine('discount', 'Diskon', $discount, 1, route('home'));
-            $sum -= $discount;
-        }
-
+        $hasDiscount = (int) $order->discount_amount > 0;
         $cart = ['count' => (string) count($items), 'item' => $items];
 
-        if (
-            $order->items->isEmpty()
-            || $sum !== (int) $order->grand_total
-            || strlen((string) json_encode($cart, JSON_UNESCAPED_SLASHES)) > self::MAX_CART_LENGTH
-        ) {
+        $itemised = ! $hasDiscount
+            && $order->items->isNotEmpty()
+            && $sum === (int) $order->grand_total
+            && strlen((string) json_encode($cart, JSON_UNESCAPED_SLASHES)) <= self::MAX_CART_LENGTH;
+
+        if ($itemised) {
+            return $cart;
+        }
+
+        if (! $hasDiscount) {
             Log::warning('Nicepay: cartData tidak cocok dengan total atau terlalu panjang; dikirim satu baris.', [
                 'order_id' => $order->id,
                 'cart_sum' => $sum,
                 'grand_total' => $order->grand_total,
             ]);
-
-            return [
-                'count' => '1',
-                'item' => [$this->cartLine(
-                    (string) $order->order_number,
-                    'Pesanan '.$order->order_number,
-                    (int) $order->grand_total,
-                    1,
-                    route('home'),
-                )],
-            ];
         }
 
-        return $cart;
+        return [
+            'count' => '1',
+            'item' => [$this->cartLine(
+                (string) $order->order_number,
+                'Pesanan '.$order->order_number,
+                (int) $order->grand_total,
+                1,
+                route('home'),
+            )],
+        ];
     }
 
     private function cartLine(string $id, string $name, int $amount, int $quantity, string $url): array

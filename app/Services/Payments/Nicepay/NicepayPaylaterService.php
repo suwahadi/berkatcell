@@ -214,6 +214,7 @@ class NicepayPaylaterService
     private function storeEvent(array $payload): PaymentWebhookEvent
     {
         $text = fn (string $key): string => is_scalar($payload[$key] ?? null) ? (string) $payload[$key] : '';
+        $nullable = fn (string $key): ?string => $text($key) === '' ? null : $text($key);
 
         $eventHash = hash('sha256', implode('|', [
             PaymentMethods::NICEPAY,
@@ -229,10 +230,10 @@ class NicepayPaylaterService
             [
                 'provider' => PaymentMethods::NICEPAY,
                 'midtrans_order_id' => $text('referenceNo'),
-                'transaction_id' => $text('tXid') ?: null,
-                'transaction_status' => $text('status') ?: null,
-                'gross_amount' => $text('amt') ?: null,
-                'signature_key' => $text('merchantToken') ?: null,
+                'transaction_id' => $nullable('tXid'),
+                'transaction_status' => $nullable('status'),
+                'gross_amount' => $nullable('amt'),
+                'signature_key' => $nullable('merchantToken'),
                 'payload' => $payload,
                 'processing_status' => 'received',
             ]

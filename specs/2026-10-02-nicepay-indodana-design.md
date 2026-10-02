@@ -334,6 +334,27 @@ Diuji ke `https://dev.nicepay.co.id` dengan kredensial uji publik `IONPAYTEST`, 
 
 Karena Paylater tidak aktif di akun uji, langkah Payment, Status Inquiry, Cancel, dan notifikasi belum pernah dijalankan terhadap Nicepay. Semuanya baru terverifikasi lewat tes dengan respons tiruan, dan menunggu transaksi sungguhan di langkah 4.
 
+### 13.3 Hasil uji sandbox dengan merchant uji Paylater (2 Oktober 2026)
+
+Kesimpulan 13.1 bahwa Paylater tidak bisa diuji di sandbox hanya berlaku untuk `IONPAYTEST`. Merchant uji `PAYLOANTES` (dipakai contoh Paylater di dokumentasi) dengan merchantKey uji publik yang sama mengaktifkan Indodana. Dengan itu satu pembayaran dijalankan sampai lunas di `sandbox01.indodanafinance.co.id` memakai akun uji Indodana dari dokumentasi (telepon 62838499610, OTP 999999, PIN 123654), lewat URL tunnel publik.
+
+| Pertanyaan | Jawaban dari sandbox |
+|---|---|
+| Apakah `instmntMon` mengikat? | Tidak. Kita mengirim 1 bulan; halaman Indodana menawarkan "3 x" dan "1 x", dan setelah pelanggan memilih 3 bulan, inquiry melaporkan `instmntMon = 3`. Pemilih tenor di halaman kita tidak diperlukan. |
+| Format ongkir dan diskon di `cartData` | Baris `shippingfee` diterima. Baris diskon ditolak: nilai positif `9907` (jumlah tidak cocok), nilai negatif `1002`. Pesanan berdiskon kini dikirim sebagai satu baris senilai total. |
+| Arti `goods_amt` | Harga satuan; Nicepay mengalikannya dengan `goods_quantity`. |
+| Langkah Payment: POST atau GET | Keduanya dibalas `302` ke halaman Indodana. Kita memakai form POST. |
+| Cara pelanggan kembali | Nicepay mengirim **POST** berisi field form ke `callBackUrl`. Rute callback kita menerimanya. |
+| Status Inquiry | `9` (init) sebelum dibayar, `0` (paid) setelahnya. `amt` tetap senilai pesanan; biaya layanan Indodana ditagihkan ke pelanggan di luar `amt`. |
+| Notifikasi | Tiba di `dbProcessUrl` 13 detik setelah pembayaran. Token-nya cocok dengan rumus `iMid + tXid + amt + merchantKey`. |
+| Zona waktu `timeStamp` | `Asia/Jakarta` diterima. |
+| Cancel untuk tagihan belum dibayar | Dibalas `9528 Transaction not found`. Tagihan yang digantikan tetap bisa dibayar di Indodana sampai kedaluwarsa; pembayaran terlambat ditangani logika pelunasan. Kode `9528` tidak lagi dicatat sebagai peringatan. |
+| Cancel untuk transaksi lunas | Sandbox membalas `9302 Server is busy`. Belum terverifikasi. |
+| `userIP` untuk IPv6 | Belum diuji. |
+| Apakah Nicepay mengirim ulang notifikasi yang dibalas bukan 200? | Belum diketahui. |
+
+Yang belum diuji di sandbox adalah alur lewat aplikasi kita sendiri dari halaman pesanan sampai pesanan berstatus lunas; itu butuh `NICEPAY_*` terisi di `.env` lokal. Uji di atas memanggil kelas `NicepayClient` dan `NicepayRegistrationPayload` langsung.
+
 ### 13.2 Perubahan dari tinjauan akhir (2 Oktober 2026)
 
 Tinjauan seluruh branch oleh reviewer independen menghasilkan perubahan perilaku berikut. Butir pertama dan ketiga juga berlaku untuk Midtrans.

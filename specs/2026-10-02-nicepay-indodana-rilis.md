@@ -92,7 +92,7 @@ Kartu Indodana hanya muncul untuk pesanan dengan total Rp10.000 sampai Rp50.000.
 
 ## 4. Transaksi uji oleh admin
 
-Ini transaksi sungguhan dengan uang sungguhan. Sampai langkah ini, langkah Payment, Status Inquiry, Cancel, dan notifikasi belum pernah dijalankan terhadap Nicepay; semuanya baru teruji dengan respons tiruan.
+Ini transaksi sungguhan dengan uang sungguhan. Registration, Payment, Status Inquiry, callback, dan notifikasi sudah dijalankan di sandbox Nicepay (lihat spec bagian 13.3), tetapi belum pernah di produksi dengan kredensial toko. Uji dulu di sandbox dari komputer lokal (bagian 9) sebelum langkah ini.
 
 1. Login sebagai admin, buat satu pesanan kecil (minimal Rp10.000) dengan pengiriman kurir supaya ada ongkir.
 2. Di halaman pesanan pilih Indodana, tekan Bayar.
@@ -169,7 +169,34 @@ Perubahan ini berlaku begitu kode dirilis, walau Nicepay dimatikan:
 - Saat pelanggan berganti metode, tagihan lama dibatalkan setelah tagihan baru berhasil dibuat, bukan sebelumnya.
 - Rekonsiliasi terjadwal bernama `payments:reconcile` dan tidak berjalan tumpang tindih.
 
-## 9. Yang belum dikerjakan
+## 9. Uji sandbox dari komputer lokal
+
+Tidak memakai uang sungguhan. Nicepay menolak URL `localhost`, jadi situs harus dibuka lewat tunnel publik.
+
+1. Jalankan tunnel ke server lokal dan catat URL publiknya.
+2. Isi `.env` lokal. Nilai sandbox ada di `.env.example`:
+
+```dotenv
+APP_URL=<URL tunnel>
+NICEPAY_ENABLED=true
+NICEPAY_ADMIN_ONLY=false
+NICEPAY_IS_PRODUCTION=false
+NICEPAY_IMID=PAYLOANTES
+NICEPAY_MERCHANT_KEY="<merchantKey uji publik dari .env.example>"
+NICEPAY_STORE_CITY="<kota toko>"
+NICEPAY_STORE_STATE="<provinsi toko>"
+NICEPAY_STORE_POSTCODE=<kode pos toko>
+```
+
+`IONPAYTEST` tidak mengaktifkan Indodana; pakai `PAYLOANTES`.
+
+3. Buka situs **lewat URL tunnel**, buat pesanan Rp10.000 sampai Rp50.000.000, pilih Indodana, tekan Bayar.
+4. Di halaman Indodana masuk dengan akun uji: telepon `838499610` (setelah `+62`), PIN `123654`, OTP `999999` bila diminta. Pilih tenor, centang persetujuan, tekan Bayar, masukkan PIN lagi.
+5. Tekan "Kembali ke halaman merchant". Pesanan seharusnya sudah Lunas, atau menjadi Lunas saat notifikasi tiba beberapa detik kemudian.
+
+Yang layak dicoba: pesanan dengan ongkir, pesanan dengan voucher diskon, ganti metode dari Indodana ke VA lalu bayar Indodana yang lama, dan membatalkan pesanan yang tagihan Indodananya masih terbuka.
+
+## 10. Yang belum dikerjakan
 
 - Refund otomatis. Pesanan lunas yang dibatalkan admin tetap direfund manual lewat back office Nicepay.
 - Batas laju Status Inquiry Nicepay belum diketahui. Halaman pesanan memeriksa status tagihan Indodana tiap 120 detik selama terbuka (tagihan Midtrans tetap tiap 30 detik).

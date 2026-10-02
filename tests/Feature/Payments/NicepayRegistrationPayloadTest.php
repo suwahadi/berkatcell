@@ -86,8 +86,7 @@ class NicepayRegistrationPayloadTest extends TestCase
         $sum = 0;
 
         foreach ($cart['item'] as $item) {
-            $line = (int) $item['goods_amt'] * (int) $item['goods_quantity'];
-            $sum += $item['goods_id'] === 'discount' ? -$line : $line;
+            $sum += (int) $item['goods_amt'] * (int) $item['goods_quantity'];
         }
 
         return $sum;
@@ -171,23 +170,40 @@ class NicepayRegistrationPayloadTest extends TestCase
         $this->assertSame(100, mb_strlen($payload['deliveryAddr']));
     }
 
-    public function test_keranjang_memuat_ongkir_dan_diskon_dan_jumlahnya_sama_dengan_total(): void
+    public function test_keranjang_tanpa_diskon_memuat_baris_ongkir(): void
     {
-        $order = $this->orderWithItem();
+        $order = $this->orderWithItem(['discount_amount' => 0, 'grand_total' => 215000]);
 
         $payload = $this->builder->build($order, $this->attemptFor($order));
         $cart = json_decode($payload['cartData'], true);
 
-        $this->assertSame('3', $cart['count']);
-        $this->assertSame(['shippingfee', 'discount'], [$cart['item'][1]['goods_id'], $cart['item'][2]['goods_id']]);
+        $this->assertSame('2', $cart['count']);
+        $this->assertSame('shippingfee', $cart['item'][1]['goods_id']);
         $this->assertSame('Samsung Galaxy A16 5G', $cart['item'][0]['goods_name']);
         $this->assertSame('100000', $cart['item'][0]['goods_amt']);
         $this->assertSame('2', $cart['item'][0]['goods_quantity']);
         $this->assertSame('others', $cart['item'][0]['goods_type']);
         $this->assertSame('TESTIMID01', $cart['item'][0]['goods_sellers_id']);
         $this->assertSame('Berkat Cell', $cart['item'][0]['goods_sellers_name']);
-        $this->assertSame('20000', $cart['item'][2]['goods_amt']);
-        $this->assertSame(195000, $this->cartSum($cart));
+        $this->assertSame('15000', $cart['item'][1]['goods_amt']);
+        $this->assertSame(215000, $this->cartSum($cart));
+    }
+
+    /**
+     * Sandbox Nicepay menolak baris diskon untuk Indodana: nilai positif gagal 9907
+     * (jumlah tidak cocok) dan nilai negatif gagal 1002.
+     */
+    public function test_pesanan_berdiskon_dikirim_satu_baris_senilai_total(): void
+    {
+        $order = $this->orderWithItem();
+
+        $payload = $this->builder->build($order, $this->attemptFor($order));
+        $cart = json_decode($payload['cartData'], true);
+
+        $this->assertSame('1', $cart['count']);
+        $this->assertSame('Pesanan '.$order->order_number, $cart['item'][0]['goods_name']);
+        $this->assertSame('195000', $cart['item'][0]['goods_amt']);
+        $this->assertSame('1', $cart['item'][0]['goods_quantity']);
     }
 
     public function test_keranjang_tak_cocok_dikirim_satu_baris(): void

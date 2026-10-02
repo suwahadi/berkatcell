@@ -195,4 +195,18 @@ class NicepayClientTest extends TestCase
             ->withArgs(fn (string $message, array $context = []): bool => str_contains($message, 'cancel') && ($context['resultCd'] ?? null) === '9999')
             ->once();
     }
+
+    /**
+     * Cancel hanya berlaku untuk transaksi yang sudah dibayar. Untuk tagihan yang
+     * belum dibayar sandbox selalu membalas 9528, jadi itu bukan kejadian yang perlu dicatat.
+     */
+    public function test_cancel_tagihan_belum_dibayar_tidak_dicatat_sebagai_peringatan(): void
+    {
+        Log::spy();
+        Http::fake(['*/nicepay/direct/v2/cancel' => Http::response(['resultCd' => '9528', 'resultMsg' => 'Transaction not found. '], 200)]);
+
+        $this->client->cancel($this->attempt());
+
+        Log::shouldNotHaveReceived('warning');
+    }
 }

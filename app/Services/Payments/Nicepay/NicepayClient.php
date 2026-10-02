@@ -14,6 +14,13 @@ class NicepayClient
 {
     public const PAY_METHOD_PAYLATER = '06';
 
+    /**
+     * Cancel hanya berlaku untuk transaksi yang sudah dibayar. Untuk tagihan yang belum
+     * dibayar Nicepay membalas kode ini, jadi tagihan lama tetap bisa dibayar di mitra
+     * sampai kedaluwarsa dan itu bukan kegagalan yang perlu dicatat.
+     */
+    private const RESULT_TRANSACTION_NOT_FOUND = '9528';
+
     public function baseUrl(): string
     {
         return rtrim((string) (config('services.nicepay.is_production')
@@ -111,7 +118,7 @@ class NicepayClient
             'merchantToken' => $this->token($timeStamp, $this->merchantId(), $tXid, $amount),
         ]);
 
-        if (($response['resultCd'] ?? null) !== '0000') {
+        if (! in_array($response['resultCd'] ?? null, ['0000', self::RESULT_TRANSACTION_NOT_FOUND], true)) {
             Log::warning('Nicepay cancel tidak berhasil', [
                 'referenceNo' => $attempt->midtrans_order_id,
                 'resultCd' => $response['resultCd'] ?? null,

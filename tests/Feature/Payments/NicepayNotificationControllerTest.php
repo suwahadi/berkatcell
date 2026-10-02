@@ -101,6 +101,8 @@ class NicepayNotificationControllerTest extends TestCase
             'provider' => PaymentMethods::NICEPAY,
             'midtrans_order_id' => $attempt->midtrans_order_id,
             'transaction_id' => 'TESTIMID0106202610021015001234',
+            'transaction_status' => '0',
+            'gross_amount' => '150000',
             'processing_status' => 'processed',
         ]);
     }
