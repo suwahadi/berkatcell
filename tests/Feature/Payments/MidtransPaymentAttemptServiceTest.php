@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\PaymentAttempt;
 use App\Models\Product;
 use App\Services\Payments\Midtrans\MidtransPaymentAttemptService;
+use App\Services\Payments\PaymentAttemptService;
 use App\Services\SettingService;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,8 +23,12 @@ class MidtransPaymentAttemptServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private MidtransPaymentAttemptService $service;
+    private PaymentAttemptService $service;
 
+    /**
+     * Hanya cancel yang di-fake global. Snap di-fake per tes supaya tes kegagalan
+     * bisa mendaftarkan stub 500 lebih dulu (Http::fake memakai stub pertama yang cocok).
+     */
     protected function setUp(): void
     {
         parent::setUp();
@@ -34,11 +39,9 @@ class MidtransPaymentAttemptServiceTest extends TestCase
             'services.midtrans.is_production' => false,
         ]);
 
-        // Hanya cancel yang di-fake global; snap di-fake per-test agar test kegagalan
-        // bisa mendaftarkan stub 500 sebagai stub snap pertama (first-match-wins).
         Http::fake(['*/v2/*/cancel' => Http::response(['status_code' => '200'], 200)]);
 
-        $this->service = app(MidtransPaymentAttemptService::class);
+        $this->service = app(PaymentAttemptService::class);
     }
 
     private function fakeSnapSuccess(): void
@@ -93,7 +96,6 @@ class MidtransPaymentAttemptServiceTest extends TestCase
         $this->assertSame($a2->id, $order->fresh()->active_payment_attempt_id);
         $this->assertSame($order->order_number.'-A2', $a2->midtrans_order_id);
 
-        // Cancel best effort ke Midtrans untuk attempt lama.
         Http::assertSent(fn ($request) => str_contains($request->url(), '/cancel'));
     }
 
@@ -104,7 +106,6 @@ class MidtransPaymentAttemptServiceTest extends TestCase
             MidtransPaymentAttemptService::supportedMethods(),
         );
 
-        // Elemen pertama jadi default terpilih di halaman invoice.
         $this->assertSame('gopay', MidtransPaymentAttemptService::supportedMethods()[0]);
     }
 
@@ -141,7 +142,6 @@ class MidtransPaymentAttemptServiceTest extends TestCase
                 $this->service->createOrReuseActiveAttempt($order, $method);
                 $this->fail("Metode {$method} seharusnya ditolak.");
             } catch (BusinessRuleException) {
-                // diharapkan.
             }
         }
 
@@ -209,7 +209,6 @@ class MidtransPaymentAttemptServiceTest extends TestCase
             60,
         );
 
-        // Payload Snap yang dikirim ke Midtrans memuat blok expiry (menit).
         $this->assertSame('minute', $attempt->snap_request_payload['expiry']['unit']);
         $this->assertSame(5, $attempt->snap_request_payload['expiry']['duration']);
     }
@@ -218,7 +217,6 @@ class MidtransPaymentAttemptServiceTest extends TestCase
     {
         $order = Order::factory()->create();
 
-        // Attempt pertama open (pending).
         PaymentAttempt::factory()->create([
             'order_id' => $order->id,
             'attempt_sequence' => 1,
@@ -226,7 +224,6 @@ class MidtransPaymentAttemptServiceTest extends TestCase
             'status' => PaymentAttemptStatus::PENDING,
         ]);
 
-        // Attempt kedua open untuk order yang sama harus ditolak oleh unique active_guard.
         $this->expectException(QueryException::class);
 
         PaymentAttempt::factory()->create([
@@ -250,10 +247,8 @@ class MidtransPaymentAttemptServiceTest extends TestCase
             $this->service->createOrReuseActiveAttempt($order, 'bni_va');
             $this->fail('Seharusnya melempar BusinessRuleException.');
         } catch (BusinessRuleException) {
-            // diharapkan.
         }
 
-        // Transaksi di-rollback: tidak ada attempt PENDING tanpa token yang tertinggal.
         $this->assertDatabaseCount('payment_attempts', 0);
         $this->assertNull($order->fresh()->active_payment_attempt_id);
     }
@@ -266,7 +261,6 @@ class MidtransPaymentAttemptServiceTest extends TestCase
         $order = Order::factory()->create(['grand_total' => 175000]);
         $attempt = $this->service->createOrReuseActiveAttempt($order, 'bni_va');
 
-        // Midtrans Get Status mengembalikan settlement (sumber tepercaya, tanpa signature).
         Http::fake([
             '*/v2/*/status' => Http::response([
                 'order_id' => $attempt->midtrans_order_id,

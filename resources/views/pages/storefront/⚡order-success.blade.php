@@ -4,7 +4,8 @@ use App\Enums\OrderStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
-use App\Services\Payments\Midtrans\MidtransPaymentAttemptService;
+use App\Services\Payments\PaymentAttemptService;
+use App\Services\Payments\PaymentMethods;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -24,7 +25,7 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
     {
         $this->order = $order->load('items.product', 'items.variant', 'voucher', 'activePaymentAttempt');
         $this->payment_method = $this->order->activePaymentAttempt?->payment_method
-            ?? MidtransPaymentAttemptService::supportedMethods()[0];
+            ?? array_key_first($this->paymentMethods());
     }
 
     #[Computed]
@@ -37,41 +38,25 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
 
     public function methods(): array
     {
-        return [
-            'gopay' => 'QRIS',
-            'akulaku' => 'Akulaku PayLater',
-            'bsi_va' => 'Virtual Account BSI',
-            'bni_va' => 'Virtual Account BNI',
-            'bri_va' => 'Virtual Account BRI',
-            'echannel' => 'Mandiri Bill Payment',
-            'permata_va' => 'Virtual Account Permata',
-        ];
+        return array_map(fn (array $method): string => $method['name'], $this->paymentMethods());
     }
 
     public function paymentMethods(): array
     {
-        return [
-            'gopay' => ['label' => 'QRIS', 'type' => 'Scan QR', 'brand' => '#00aed6'],
-            'akulaku' => ['label' => 'Akulaku', 'type' => 'Cicilan tanpa kartu', 'brand' => '#e02020'],
-            'bsi_va' => ['label' => 'BSI', 'type' => 'Virtual Account', 'brand' => '#00a39d'],
-            'bni_va' => ['label' => 'BNI', 'type' => 'Virtual Account', 'brand' => '#ee7203'],
-            'bri_va' => ['label' => 'BRI', 'type' => 'Virtual Account', 'brand' => '#00529c'],
-            'echannel' => ['label' => 'Mandiri', 'type' => 'Bill Payment', 'brand' => '#003d79'],
-            'permata_va' => ['label' => 'Permata', 'type' => 'Virtual Account', 'brand' => '#00854a'],
-        ];
+        return PaymentMethods::available($this->order, auth()->user());
     }
 
-    public function pay(MidtransPaymentAttemptService $service): void
+    public function pay(PaymentAttemptService $service): void
     {
         $this->validate([
-            'payment_method' => ['required', Rule::in(MidtransPaymentAttemptService::supportedMethods())],
+            'payment_method' => ['required', Rule::in(array_keys($this->paymentMethods()))],
         ]);
 
-        $this->dispatchSnap($service, $this->payment_method);
+        $this->startPayment($service, $this->payment_method);
         $this->changingMethod = false;
     }
 
-    public function continuePayment(MidtransPaymentAttemptService $service): void
+    public function continuePayment(PaymentAttemptService $service): void
     {
         $attempt = $this->attempt();
 
@@ -79,7 +64,7 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
             return;
         }
 
-        $this->dispatchSnap($service, $attempt->payment_method);
+        $this->startPayment($service, $attempt->payment_method);
     }
 
     public function startChangeMethod(): void
@@ -92,7 +77,7 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
         $this->changingMethod = false;
     }
 
-    public function refreshStatus(MidtransPaymentAttemptService $service): void
+    public function refreshStatus(PaymentAttemptService $service): void
     {
         $service->syncActiveAttempt($this->order);
         $this->order->refresh();
@@ -102,7 +87,7 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
         }
     }
 
-    protected function dispatchSnap(MidtransPaymentAttemptService $service, string $method): void
+    protected function startPayment(PaymentAttemptService $service, string $method): void
     {
         try {
             $attempt = Cache::lock('order-pay:'.$this->order->id, 10)

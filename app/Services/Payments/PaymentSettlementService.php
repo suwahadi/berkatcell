@@ -131,7 +131,7 @@ class PaymentSettlementService
         ]);
 
         if ($order->status !== OrderStatus::PAID) {
-            $this->activities->paymentFailed($order, $reason);
+            $this->activities->paymentFailed($order, $reason, PaymentMethods::actorFor($attempt->provider));
         }
 
         $event?->update([

@@ -8,19 +8,10 @@ use App\Enums\OrderActivityType;
 use App\Jobs\SendBrevoEmail;
 use App\Models\Order;
 use App\Models\OrderActivity;
+use App\Services\Payments\PaymentMethods;
 
 class OrderActivityService
 {
-    private const METHOD_LABELS = [
-        'gopay' => 'QRIS',
-        'akulaku' => 'Akulaku PayLater',
-        'bsi_va' => 'Virtual Account BSI',
-        'bni_va' => 'Virtual Account BNI',
-        'bri_va' => 'Virtual Account BRI',
-        'echannel' => 'Mandiri Bill Payment',
-        'permata_va' => 'Virtual Account Permata',
-    ];
-
     public function __construct(
         private readonly WebNotificationService $web,
     ) {}
@@ -41,7 +32,7 @@ class OrderActivityService
 
     public function paymentStarted(Order $order, string $method): void
     {
-        $label = self::METHOD_LABELS[$method] ?? $method;
+        $label = PaymentMethods::name($method);
 
         $this->log(
             $order,
@@ -86,12 +77,12 @@ class OrderActivityService
         );
     }
 
-    public function paymentFailed(Order $order, string $status): void
+    public function paymentFailed(Order $order, string $status, ?string $actor = null): void
     {
         $this->log(
             $order,
             OrderActivityType::PAYMENT_FAILED,
-            'Midtrans (otomatis)',
+            $actor ?? PaymentMethods::actorFor(PaymentMethods::MIDTRANS),
             'Pembayaran gagal/kedaluwarsa ('.$status.').',
             ['transaction_status' => $status],
         );
