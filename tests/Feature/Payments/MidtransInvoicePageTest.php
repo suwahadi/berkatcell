@@ -133,6 +133,21 @@ class MidtransInvoicePageTest extends TestCase
             ->assertDontSee('ShopeePay');
     }
 
+    public function test_pilihan_metode_dan_tagihan_aktif_menampilkan_logo(): void
+    {
+        $order = Order::factory()->create();
+
+        Livewire::test(self::COMPONENT, ['order' => $order])
+            ->assertSeeHtml('images/payments/qris.svg')
+            ->assertSeeHtml('images/payments/bni.svg')
+            ->assertSeeHtml('alt="BNI"')
+            ->set('payment_method', 'bni_va')
+            ->call('pay')
+            ->assertSee('Metode Pembayaran Aktif')
+            ->assertSeeHtml('images/payments/bni.svg')
+            ->assertDontSeeHtml('images/payments/qris.svg');
+    }
+
     public function test_pay_dengan_mandiri_echannel_membuat_attempt(): void
     {
         $order = Order::factory()->create();

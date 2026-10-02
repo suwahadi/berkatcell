@@ -27,14 +27,14 @@ class PaymentMethods
      * MidtransPaymentAttemptService::METHOD_MAP.
      */
     private const METHODS = [
-        'gopay' => ['provider' => self::MIDTRANS, 'name' => 'QRIS', 'label' => 'QRIS', 'type' => 'Scan QR', 'brand' => '#00aed6'],
-        'akulaku' => ['provider' => self::MIDTRANS, 'name' => 'Akulaku PayLater', 'label' => 'Akulaku', 'type' => 'Cicilan tanpa kartu', 'brand' => '#e02020'],
-        'bsi_va' => ['provider' => self::MIDTRANS, 'name' => 'Virtual Account BSI', 'label' => 'BSI', 'type' => 'Virtual Account', 'brand' => '#00a39d'],
-        'bni_va' => ['provider' => self::MIDTRANS, 'name' => 'Virtual Account BNI', 'label' => 'BNI', 'type' => 'Virtual Account', 'brand' => '#ee7203'],
-        'bri_va' => ['provider' => self::MIDTRANS, 'name' => 'Virtual Account BRI', 'label' => 'BRI', 'type' => 'Virtual Account', 'brand' => '#00529c'],
-        'echannel' => ['provider' => self::MIDTRANS, 'name' => 'Mandiri Bill Payment', 'label' => 'Mandiri', 'type' => 'Bill Payment', 'brand' => '#003d79'],
-        'permata_va' => ['provider' => self::MIDTRANS, 'name' => 'Virtual Account Permata', 'label' => 'Permata', 'type' => 'Virtual Account', 'brand' => '#00854a'],
-        self::INDODANA => ['provider' => self::NICEPAY, 'name' => 'Indodana PayLater', 'label' => 'Indodana', 'type' => 'Cicilan tanpa kartu', 'brand' => '#1f7a00'],
+        'gopay' => ['provider' => self::MIDTRANS, 'name' => 'QRIS', 'label' => 'QRIS', 'type' => 'Scan QR', 'logo' => 'qris.svg'],
+        'akulaku' => ['provider' => self::MIDTRANS, 'name' => 'Akulaku PayLater', 'label' => 'Akulaku', 'type' => 'Cicilan tanpa kartu', 'logo' => 'akulaku.png'],
+        'bsi_va' => ['provider' => self::MIDTRANS, 'name' => 'Virtual Account BSI', 'label' => 'BSI', 'type' => 'Virtual Account', 'logo' => 'bsi.svg'],
+        'bni_va' => ['provider' => self::MIDTRANS, 'name' => 'Virtual Account BNI', 'label' => 'BNI', 'type' => 'Virtual Account', 'logo' => 'bni.svg'],
+        'bri_va' => ['provider' => self::MIDTRANS, 'name' => 'Virtual Account BRI', 'label' => 'BRI', 'type' => 'Virtual Account', 'logo' => 'bri.svg'],
+        'echannel' => ['provider' => self::MIDTRANS, 'name' => 'Mandiri Bill Payment', 'label' => 'Mandiri', 'type' => 'Bill Payment', 'logo' => 'mandiri.svg'],
+        'permata_va' => ['provider' => self::MIDTRANS, 'name' => 'Virtual Account Permata', 'label' => 'Permata', 'type' => 'Virtual Account', 'logo' => 'permata.svg'],
+        self::INDODANA => ['provider' => self::NICEPAY, 'name' => 'Indodana PayLater', 'label' => 'Indodana', 'type' => 'Cicilan tanpa kartu', 'logo' => 'indodana.svg'],
     ];
 
     public static function providerFor(string $method): ?string
@@ -45,6 +45,13 @@ class PaymentMethods
     public static function name(string $method): string
     {
         return self::METHODS[$method]['name'] ?? $method;
+    }
+
+    public static function logoUrl(string $method): ?string
+    {
+        $logo = self::METHODS[$method]['logo'] ?? null;
+
+        return $logo === null ? null : asset('images/payments/'.$logo);
     }
 
     public static function actorFor(string $provider): string

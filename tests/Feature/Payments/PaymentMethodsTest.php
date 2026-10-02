@@ -38,8 +38,24 @@ class PaymentMethodsTest extends TestCase
         $order = Order::factory()->create();
 
         foreach (PaymentMethods::available($order, null) as $key => $method) {
-            $this->assertSame(['provider', 'name', 'label', 'type', 'brand'], array_keys($method), $key);
+            $this->assertSame(['provider', 'name', 'label', 'type', 'logo'], array_keys($method), $key);
         }
+    }
+
+    public function test_setiap_metode_punya_berkas_logo(): void
+    {
+        $this->enableNicepay(false);
+
+        $methods = PaymentMethods::available($this->eligibleOrder(), null);
+
+        $this->assertArrayHasKey(PaymentMethods::INDODANA, $methods);
+
+        foreach ($methods as $key => $method) {
+            $this->assertFileExists(public_path('images/payments/'.$method['logo']), $key);
+            $this->assertSame(asset('images/payments/'.$method['logo']), PaymentMethods::logoUrl($key));
+        }
+
+        $this->assertNull(PaymentMethods::logoUrl('metode_tak_dikenal'));
     }
 
     public function test_provider_dan_nama_metode(): void
