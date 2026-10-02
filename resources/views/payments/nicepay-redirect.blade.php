@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="robots" content="noindex" />
         <title>Lanjut ke Indodana - {{ config('app.name') }}</title>
+        @fonts
         @vite(['resources/css/app.css'])
     </head>
     <body class="flex min-h-dvh items-center justify-center bg-paper px-4 py-10 text-ink antialiased">

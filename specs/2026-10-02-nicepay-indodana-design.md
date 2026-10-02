@@ -304,7 +304,7 @@ Urutan:
 1. Pemindahan inti bersama, tanpa perubahan perilaku. Semua tes lama lolos.
 2. Modul Nicepay beserta tesnya, flag mati.
 3. Uji asap ke `dev.nicepay.co.id` dengan kredensial uji publik Nicepay (`IONPAYTEST`). Hasilnya informasi; penolakan Indodana di akun uji bukan penghalang.
-4. Produksi: isi kredensial, `NICEPAY_ENABLED=true`, `NICEPAY_ADMIN_ONLY=true`. Admin membuat satu pesanan kecil sungguhan, membayar lewat Indodana, lalu transaksi di-void.
+4. Produksi: jalankan migrasi, bangun ulang aset (`npm run build`, karena halaman redirect memakai kelas Tailwind yang belum ada di build lama), isi kredensial, `NICEPAY_ENABLED=true`, `NICEPAY_ADMIN_ONLY=true`. Admin membuat satu pesanan kecil sungguhan, membayar lewat Indodana, lalu transaksi di-void.
 5. Sesuaikan berdasarkan hasil langkah 4.
 6. `NICEPAY_ADMIN_ONLY=false`.
 

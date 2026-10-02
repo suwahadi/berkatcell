@@ -4034,7 +4034,7 @@ Expected: tidak ada hasil.
 - [ ] **Step 4: Rilis ke produksi dengan fitur khusus admin**
 
 1. Di `.env` produksi: `NICEPAY_ENABLED=true`, `NICEPAY_ADMIN_ONLY=true`, `NICEPAY_IS_PRODUCTION=true`, `NICEPAY_IMID` dan `NICEPAY_MERCHANT_KEY` produksi, serta kota, provinsi, dan kode pos toko.
-2. Run di server: `php artisan migrate --force` lalu `php artisan config:cache`.
+2. Run di server: `php artisan migrate --force`, `npm run build` (atau unggah `public/build` hasil build; halaman redirect memakai kelas Tailwind yang belum ada di build lama), lalu `php artisan config:cache`.
 3. Pastikan cron `schedule:run` berjalan (rekonsiliasi kini bernama `payments:reconcile`).
 
 - [ ] **Step 5: Satu transaksi sungguhan oleh admin**
