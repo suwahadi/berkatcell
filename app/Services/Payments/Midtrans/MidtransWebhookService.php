@@ -4,25 +4,19 @@ declare(strict_types=1);
 
 namespace App\Services\Payments\Midtrans;
 
-use App\Enums\OrderStatus;
-use App\Enums\PaymentAttemptStatus;
 use App\Exceptions\InvalidWebhookSignatureException;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
 use App\Models\PaymentWebhookEvent;
-use App\Services\OrderActivityService;
-use App\Services\OrderService;
+use App\Services\Payments\PaymentSettlementService;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class MidtransWebhookService
 {
     public function __construct(
         private readonly MidtransSignatureVerifier $signatureVerifier,
         private readonly MidtransStatusMapper $statusMapper,
-        private readonly OrderService $orderService,
-        private readonly MidtransClient $client,
-        private readonly OrderActivityService $activities,
+        private readonly PaymentSettlementService $settlement,
     ) {}
 
     private const TERMINAL_STATUSES = ['processed', 'ignored', 'invalid_signature'];
@@ -85,19 +79,31 @@ class MidtransWebhookService
         $fraudStatus = $payload['fraud_status'] ?? null;
 
         if ($this->statusMapper->isPaid($transactionStatus, $fraudStatus)) {
-            $this->handlePaid($order, $attempt, $payload, $event);
+            $this->settlement->paid(
+                $order,
+                $attempt,
+                (int) round((float) ($payload['gross_amount'] ?? 0)),
+                'Midtrans (otomatis)',
+                $event,
+            );
 
             return;
         }
 
         if ($transactionStatus === 'pending') {
-            $this->handlePending($order, $attempt, $event);
+            $this->settlement->pending($order, $attempt, $event);
 
             return;
         }
 
         if ($this->statusMapper->isFailureLike($transactionStatus)) {
-            $this->handleFailed($order, $attempt, (string) $transactionStatus, $fraudStatus, $event);
+            $this->settlement->failed(
+                $order,
+                $attempt,
+                $this->statusMapper->attemptStatus($transactionStatus, $fraudStatus),
+                (string) $transactionStatus,
+                $event,
+            );
 
             return;
         }
@@ -106,138 +112,6 @@ class MidtransWebhookService
             'processing_status' => 'ignored',
             'notes' => 'transaction_status tidak ditangani: '.(string) $transactionStatus,
         ]);
-    }
-
-    private function handlePaid(Order $order, PaymentAttempt $attempt, array $payload, ?PaymentWebhookEvent $event): void
-    {
-        $grossMatches = (int) round((float) ($payload['gross_amount'] ?? 0)) === (int) $order->grand_total;
-
-        if ($order->status === OrderStatus::PAID) {
-            $attempt->update([
-                'status' => PaymentAttemptStatus::PAID,
-                'paid_at' => $attempt->paid_at ?? now(),
-            ]);
-
-            if ((int) $order->active_payment_attempt_id === (int) $attempt->id) {
-                $event?->update([
-                    'processing_status' => 'ignored',
-                    'notes' => 'Order sudah lunas. Notifikasi paid duplikat diabaikan.',
-                ]);
-
-                return;
-            }
-
-            Log::warning('Midtrans: pembayaran ganda dari attempt lain pada order yang sudah lunas.', [
-                'order_id' => $order->id,
-                'attempt_id' => $attempt->id,
-                'midtrans_order_id' => $attempt->midtrans_order_id,
-            ]);
-
-            $event?->update([
-                'processing_status' => 'ignored',
-                'notes' => 'Pembayaran dari attempt lain saat order sudah lunas. Perlu review refund.',
-            ]);
-
-            return;
-        }
-
-        if (! $grossMatches) {
-            Log::warning('Midtrans: nominal pembayaran tidak cocok dengan total order.', [
-                'order_id' => $order->id,
-                'attempt_id' => $attempt->id,
-                'gross_amount' => $payload['gross_amount'] ?? null,
-                'grand_total' => $order->grand_total,
-            ]);
-
-            $event?->update([
-                'processing_status' => 'ignored',
-                'notes' => 'Nominal pembayaran tidak cocok dengan total order. Perlu review.',
-            ]);
-
-            return;
-        }
-
-        $attempt->update([
-            'status' => PaymentAttemptStatus::PAID,
-            'paid_at' => now(),
-        ]);
-
-        $order->forceFill([
-            'paid_at' => now(),
-            'active_payment_attempt_id' => $attempt->id,
-        ])->save();
-
-        $this->orderService->markAsPaid($order, 'Midtrans (otomatis)');
-
-        $this->cancelOtherOpenAttempts($order, $attempt);
-
-        $event?->update([
-            'processing_status' => 'processed',
-            'notes' => 'Order ditandai lunas.',
-        ]);
-    }
-
-    private function handlePending(Order $order, PaymentAttempt $attempt, ?PaymentWebhookEvent $event): void
-    {
-        if ($order->status === OrderStatus::PAID) {
-            $event?->update([
-                'processing_status' => 'ignored',
-                'notes' => 'Order sudah lunas; notifikasi pending diabaikan.',
-            ]);
-
-            return;
-        }
-
-        if ((int) $order->active_payment_attempt_id !== (int) $attempt->id) {
-            $event?->update([
-                'processing_status' => 'ignored',
-                'notes' => 'Pending dari attempt non-aktif diabaikan.',
-            ]);
-
-            return;
-        }
-
-        $attempt->update(['status' => PaymentAttemptStatus::PENDING]);
-
-        $event?->update([
-            'processing_status' => 'processed',
-            'notes' => 'Status pending diproses.',
-        ]);
-    }
-
-    private function handleFailed(
-        Order $order,
-        PaymentAttempt $attempt,
-        string $transactionStatus,
-        ?string $fraudStatus,
-        ?PaymentWebhookEvent $event
-    ): void {
-        $attempt->update([
-            'status' => $this->statusMapper->attemptStatus($transactionStatus, $fraudStatus),
-            'expired_at' => $transactionStatus === 'expire' ? now() : $attempt->expired_at,
-        ]);
-
-        if ($order->status !== OrderStatus::PAID) {
-            $this->activities->paymentFailed($order, $transactionStatus);
-        }
-
-        $event?->update([
-            'processing_status' => 'processed',
-            'notes' => 'Status gagal diproses: '.$transactionStatus,
-        ]);
-    }
-
-    private function cancelOtherOpenAttempts(Order $order, PaymentAttempt $paidAttempt): void
-    {
-        $order->paymentAttempts()
-            ->where('id', '!=', $paidAttempt->id)
-            ->get()
-            ->each(function (PaymentAttempt $other): void {
-                if ($other->status instanceof PaymentAttemptStatus && $other->status->isOpen()) {
-                    $other->update(['status' => PaymentAttemptStatus::SUPERSEDED]);
-                    rescue(fn () => $this->client->cancel($other->midtrans_order_id), report: false);
-                }
-            });
     }
 
     private function applyToAttempt(PaymentAttempt $attempt, array $payload): void

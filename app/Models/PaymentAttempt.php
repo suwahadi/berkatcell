@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\PaymentAttemptStatus;
-use Database\Factories\PaymentAttemptFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,8 +13,13 @@ class PaymentAttempt extends Model
 {
     use HasFactory;
 
+    protected $attributes = [
+        'provider' => 'midtrans',
+    ];
+
     protected $fillable = [
         'order_id',
+        'provider',
         'attempt_sequence',
         'midtrans_order_id',
         'payment_method',

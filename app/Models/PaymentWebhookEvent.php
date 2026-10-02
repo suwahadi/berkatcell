@@ -8,7 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class PaymentWebhookEvent extends Model
 {
+    protected $attributes = [
+        'provider' => 'midtrans',
+    ];
+
     protected $fillable = [
+        'provider',
         'midtrans_order_id',
         'transaction_id',
         'transaction_status',
