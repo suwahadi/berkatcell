@@ -115,7 +115,9 @@ Yang juga harus benar setelah pembayaran:
 - Aktivitas pesanan mencatat "Pembayaran diterima" dengan pelaku `Indodana via Nicepay (otomatis)`.
 - Email "pembayaran diterima" terkirim seperti pada pembayaran Midtrans.
 
-Setelah selesai, void transaksi uji lewat back office Nicepay. Void itu akan muncul di aktivitas pesanan sebagai "Pembayaran dibatalkan di penyedia"; status pesanan tidak berubah otomatis.
+Setelah selesai, void transaksi uji lewat back office Nicepay. Tunggu beberapa menit setelah pembayaran: di sandbox, cancel yang dikirim satu sampai tiga menit setelah pembayaran dibalas `9302 Server is busy` dan baru berhasil sekitar sembilan menit setelahnya.
+
+Status pesanan tidak berubah otomatis, dan di sandbox Nicepay tidak mengirim notifikasi untuk refund. Jadi jangan menunggu void itu muncul di aktivitas pesanan; batalkan pesanan ujinya sendiri di admin. Catat di spec bila di produksi notifikasinya ternyata datang (aktivitasnya berbunyi "Pembayaran dibatalkan di penyedia").
 
 ## 5. Kalau ada yang tidak berjalan
 
@@ -194,11 +196,13 @@ NICEPAY_STORE_POSTCODE=<kode pos toko>
 4. Di halaman Indodana masuk dengan akun uji: telepon `838499610` (setelah `+62`), PIN `123654`, OTP `999999` bila diminta. Pilih tenor, centang persetujuan, tekan Bayar, masukkan PIN lagi.
 5. Tekan "Kembali ke halaman merchant". Pesanan seharusnya sudah Lunas, atau menjadi Lunas saat notifikasi tiba beberapa detik kemudian.
 
-Yang layak dicoba: pesanan dengan ongkir, pesanan dengan voucher diskon, ganti metode dari Indodana ke VA lalu bayar Indodana yang lama, dan membatalkan pesanan yang tagihan Indodananya masih terbuka.
+Yang sudah dicoba dengan cara ini dan hasilnya sesuai (spec bagian 13.3): pesanan dengan ongkir, pesanan dengan voucher diskon, ganti metode dari Indodana ke VA lalu bayar Indodana yang lama, dan membatalkan pesanan yang tagihan Indodananya masih terbuka lalu membayarnya.
+
+Tagihan Indodana tidak bisa dimatikan dari sisi kita. Setelah pelanggan berganti metode atau pesanan dibatalkan, tagihan lama tetap bisa dibayar di Indodana sampai 24 jam.
 
 ## 10. Yang belum dikerjakan
 
-- Refund otomatis. Pesanan lunas yang dibatalkan admin tetap direfund manual lewat back office Nicepay.
+- Refund otomatis. Pesanan lunas yang dibatalkan admin tetap direfund manual lewat back office Nicepay, dan refund itu tidak tercatat sendiri di aktivitas pesanan.
 - Batas laju Status Inquiry Nicepay belum diketahui. Halaman pesanan memeriksa status tagihan Indodana tiap 120 detik selama terbuka (tagihan Midtrans tetap tiap 30 detik).
 
 Pembayaran yang masuk untuk pesanan yang sudah dibatalkan tetap menandai pesanan Lunas, karena stok dan kuota voucher sudah dikembalikan saat pembatalan. Admin mendapat notifikasi "Pembayaran masuk untuk pesanan yang dibatalkan" di lonceng, dan aktivitas pesanan mencatat "Perlu Ditinjau". Putuskan per kasus: kirim barangnya bila stok masih ada, atau refund.

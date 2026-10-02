@@ -349,7 +349,8 @@ Kesimpulan 13.1 bahwa Paylater tidak bisa diuji di sandbox hanya berlaku untuk `
 | Notifikasi | Tiba di `dbProcessUrl` 13 detik setelah pembayaran. Token-nya cocok dengan rumus `iMid + tXid + amt + merchantKey`. |
 | Zona waktu `timeStamp` | `Asia/Jakarta` diterima. |
 | Cancel untuk tagihan belum dibayar | Dibalas `9528 Transaction not found`. Tagihan yang digantikan tetap bisa dibayar di Indodana sampai kedaluwarsa; pembayaran terlambat ditangani logika pelunasan. Kode `9528` tidak lagi dicatat sebagai peringatan. |
-| Cancel untuk transaksi lunas | Sandbox membalas `9302 Server is busy`. Belum terverifikasi. |
+| Cancel untuk transaksi lunas | Berhasil (`0000 SUCCESS`) bila dikirim beberapa menit setelah pembayaran; inquiry lalu berstatus `2` (refund). Satu dan tiga menit setelah pembayaran sandbox masih membalas `9302 Server is busy`; sembilan menit setelahnya berhasil. Parameter kita sama dengan dokumentasi Cancel Paylater. |
+| Apakah refund memicu notifikasi? | Tidak ada notifikasi yang tiba dalam enam menit setelah cancel berhasil. Refund baru tercatat di aplikasi bila ada yang memicu inquiry untuk attempt itu. |
 | `userIP` untuk IPv6 | Belum diuji. |
 | Apakah Nicepay mengirim ulang notifikasi yang dibalas bukan 200? | Belum diketahui. |
 
@@ -359,7 +360,20 @@ Uji di atas memanggil kelas `NicepayClient` dan `NicepayRegistrationPayload` lan
 - Pesanan dilunasi oleh callback (inquiry berstatus `0`) pada detik pelanggan kembali; aktivitasnya mencatat pelaku `Indodana via Nicepay (otomatis)`.
 - Notifikasi tiba dua detik kemudian dan dicatat sebagai duplikat yang diabaikan, karena pesanan sudah lunas.
 
-Yang belum diuji lewat aplikasi di sandbox: pesanan berdiskon, ganti metode dari Indodana lalu membayar tagihan lama, dan membatalkan pesanan yang tagihannya masih terbuka.
+Tiga skenario berikutnya juga dijalankan lewat aplikasi di sandbox, masing-masing dengan pesanan Rp150.000 ditambah ongkir Rp15.000:
+
+| Skenario | Hasil |
+|---|---|
+| Pesanan berdiskon Rp20.000 | Registration diterima dengan satu baris. Halaman Indodana menampilkan "Pesanan JW-..." Rp145.000 tanpa rincian produk dan ongkir. Pesanan Lunas lewat callback. |
+| Ganti metode dari Indodana ke VA BNI, lalu tagihan Indodana lama dibayar | Saat berganti, attempt Indodana menjadi `superseded` dan cancel dibalas `9528` tanpa peringatan di log. Tagihan lama tetap bisa dibayar di Indodana. Setelah dibayar pesanan Lunas, attempt Indodana menjadi `paid` dan kembali menjadi attempt aktif, attempt VA menjadi `superseded`. |
+| Pesanan dibatalkan saat tagihan Indodana masih terbuka, lalu tagihan itu dibayar | Pembatalan membuat attempt `cancelled`, mengembalikan stok, dan tautan `/payments/nicepay/pay/{uuid}` mengalihkan ke halaman pesanan tanpa form. Tagihan tetap bisa dibayar di Indodana. Setelah dibayar pesanan Lunas (kali ini lewat notifikasi), aktivitas mencatat "Perlu Ditinjau", dan admin menerima `PaidAfterCancelNotification`. Stok tidak dikurangi lagi. |
+
+Transaksi lunas dari skenario pertama lalu di-cancel lewat API dan disinkronkan lewat `NicepayPaylaterService::sync()`: attempt menjadi `cancelled`, aktivitas mencatat "Pembayaran dibatalkan di penyedia (refund). Perlu ditinjau admin.", dan pesanan tetap Lunas sesuai rancangan `PaymentSettlementService::reversed()`.
+
+Dua hal yang perlu diingat dari hasil ini:
+
+- Membatalkan pesanan atau berganti metode tidak mematikan tagihan Indodana. Tagihan itu hidup sampai kedaluwarsa (24 jam), jadi peringatan "Perlu Ditinjau" adalah jalur yang benar-benar terpakai, bukan kasus langka.
+- Tidak ada yang memicu inquiry untuk attempt yang sudah lunas. Rekonsiliasi hanya memeriksa attempt terbuka, dan sandbox tidak mengirim notifikasi refund. Refund yang dilakukan admin di back office Nicepay karena itu tidak muncul sendiri di aktivitas pesanan.
 
 ### 13.2 Perubahan dari tinjauan akhir (2 Oktober 2026)
 
@@ -367,7 +381,7 @@ Tinjauan seluruh branch oleh reviewer independen menghasilkan perubahan perilaku
 
 | Perilaku | Alasan |
 |---|---|
-| Membatalkan pesanan (`OrderService::cancel`) menutup semua attempt yang masih terbuka: status `CANCELLED` dan cancel dikirim ke penyedianya. | Tanpa ini pesanan yang dibatalkan masih bisa dibayar, selama 24 jam untuk Indodana. |
+| Membatalkan pesanan (`OrderService::cancel`) menutup semua attempt yang masih terbuka: status `CANCELLED` dan cancel dikirim ke penyedianya. | Tanpa ini pesanan yang dibatalkan masih bisa dibayar. Untuk Indodana ini hanya menutup jalur dari situs kita: tagihannya tetap bisa dibayar di Indodana sampai 24 jam (bagian 13.3). |
 | Halaman `payments.nicepay.pay` hanya menampilkan form bila pesanan masih menunggu pembayaran. | Pesanan yang dibatalkan sebelumnya masih mendapat form bayar. |
 | Saat pelanggan berganti metode, cancel ke penyedia lama dikirim setelah tagihan baru berhasil dibuat. | Bila tagihan baru gagal dibuat, tagihan lama tetap hidup di penyedia dan di database. |
 | Attempt terbuka yang sudah lewat `expired_at` tidak dipakai ulang; memilih metode yang sama membuat tagihan baru. | Attempt yang inquiry-nya terus gagal tidak lagi mengunci pelanggan. |
