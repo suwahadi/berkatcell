@@ -349,6 +349,20 @@ Tinjauan seluruh branch oleh reviewer independen menghasilkan perubahan perilaku
 | Hasil inquiry dan cancel yang bukan `0000` dicatat di log. | Sebelumnya dibuang diam-diam, padahal keduanya belum pernah dijalankan terhadap Nicepay sungguhan. |
 | Token notifikasi selalu tidak valid bila `merchant_key` kosong. | Dengan kunci kosong siapa pun bisa menghitung token yang cocok. |
 
+Tindak lanjut temuan kecil dari tinjauan yang sama:
+
+- Tiga rute Nicepay dibatasi lajunya: notifikasi 120 per menit, halaman bayar dan callback 30 per menit, per IP.
+- `referenceNo`, `tXid`, `amt`, atau `merchantToken` yang berbentuk array diperlakukan sebagai tidak valid, bukan error 500.
+- Baris event dikunci saat diproses; event yang sudah selesai diproses tidak ditimpa oleh permintaan kembar.
+- Hasil inquiry "belum bayar" tidak menimpa attempt yang sudah lunas, dan status gagal pada attempt yang sudah tidak terbuka diabaikan.
+- Void dan refund dicatat satu kali di aktivitas pesanan (`PaymentSettlementService::reversed()`).
+- `payments:reconcile` dijadwalkan dengan `withoutOverlapping()`.
+- Batas nominal dan panjang email Indodana juga diperiksa di `PaymentAttemptService` lewat `PaymentMethods::eligible()`. Syarat khusus admin tetap hanya di halaman, supaya pelanggan bisa melanjutkan tagihan yang dibuat admin.
+- Log pelunasan kembali diawali nama penyedia.
+- Kunci bayar di halaman invoice berlaku 60 detik, dan kunci yang sedang dipakai menampilkan pesan, bukan error.
+
+Panduan rilis untuk produksi ada di `specs/2026-10-02-nicepay-indodana-rilis.md`.
+
 Yang sengaja tidak diubah: pembayaran yang masuk untuk pesanan yang sudah dibatalkan tetap menandai pesanan lunas. Belum ada kanal peringatan untuk admin, jadi menahan pesanan di status dibatalkan akan membuat uang pelanggan tidak terlihat oleh siapa pun.
 
 ## 14. Utang yang dicatat
