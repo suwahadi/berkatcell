@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentAttemptStatus;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Services\Payments\PaymentMethods;
 use App\Services\Payments\PaymentSettlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -102,5 +103,30 @@ class PaymentSettlementServiceTest extends TestCase
         $this->service->cancelAtGateway($attempt);
 
         Http::assertSent(fn ($request) => str_contains($request->url(), 'midtrans.com/v2/'.$attempt->midtrans_order_id.'/cancel'));
+    }
+
+    public function test_cancel_attempt_nicepay_dikirim_ke_nicepay(): void
+    {
+        config([
+            'services.nicepay.is_production' => false,
+            'services.nicepay.imid' => 'TESTIMID01',
+            'services.nicepay.merchant_key' => 'test-merchant-key',
+        ]);
+        Http::fake(['*/nicepay/direct/v2/cancel' => Http::response(['resultCd' => '0000'], 200)]);
+
+        $order = Order::factory()->create();
+        $attempt = PaymentAttempt::factory()->create([
+            'order_id' => $order->id,
+            'provider' => PaymentMethods::NICEPAY,
+            'midtrans_order_id' => $order->order_number.'-A1',
+            'midtrans_transaction_id' => 'TX123',
+            'payment_method' => 'indodana',
+            'gross_amount' => $order->grand_total,
+        ]);
+
+        $this->service->cancelAtGateway($attempt);
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/nicepay/direct/v2/cancel') && $request['tXid'] === 'TX123');
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'midtrans.com'));
     }
 }

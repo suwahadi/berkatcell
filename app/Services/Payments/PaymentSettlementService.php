@@ -12,6 +12,7 @@ use App\Models\PaymentWebhookEvent;
 use App\Services\OrderActivityService;
 use App\Services\OrderService;
 use App\Services\Payments\Midtrans\MidtransClient;
+use App\Services\Payments\Nicepay\NicepayClient;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -24,6 +25,7 @@ class PaymentSettlementService
         private readonly OrderService $orderService,
         private readonly OrderActivityService $activities,
         private readonly MidtransClient $midtrans,
+        private readonly NicepayClient $nicepay,
     ) {}
 
     public function paid(Order $order, PaymentAttempt $attempt, int $paidAmount, string $actor, ?PaymentWebhookEvent $event = null): void
@@ -142,7 +144,10 @@ class PaymentSettlementService
 
     public function cancelAtGateway(PaymentAttempt $attempt): void
     {
-        rescue(fn () => $this->midtrans->cancel($attempt->midtrans_order_id), report: false);
+        rescue(fn () => match ($attempt->provider) {
+            PaymentMethods::NICEPAY => $this->nicepay->cancel($attempt),
+            default => $this->midtrans->cancel($attempt->midtrans_order_id),
+        }, report: false);
     }
 
     private function cancelOtherOpenAttempts(Order $order, PaymentAttempt $paidAttempt): void

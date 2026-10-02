@@ -55,4 +55,18 @@ return [
         'snap_js_production' => 'https://app.midtrans.com/snap/snap.js',
     ],
 
+    'nicepay' => [
+        'enabled' => env('NICEPAY_ENABLED', false),
+        'admin_only' => env('NICEPAY_ADMIN_ONLY', true),
+        'is_production' => env('NICEPAY_IS_PRODUCTION', false),
+        'imid' => env('NICEPAY_IMID'),
+        'merchant_key' => env('NICEPAY_MERCHANT_KEY'),
+        'expiry_minutes' => (int) env('NICEPAY_EXPIRY_MINUTES', 1440),
+        'store_city' => env('NICEPAY_STORE_CITY'),
+        'store_state' => env('NICEPAY_STORE_STATE'),
+        'store_postcode' => env('NICEPAY_STORE_POSTCODE'),
+        'development_url' => env('NICEPAY_DEVELOPMENT_URL', 'https://dev.nicepay.co.id'),
+        'production_url' => env('NICEPAY_PRODUCTION_URL', 'https://www.nicepay.co.id'),
+    ],
+
 ];
