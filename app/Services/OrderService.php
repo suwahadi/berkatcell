@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Variant;
 use App\Models\Voucher;
+use App\Services\Payments\PaymentSettlementService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -225,7 +226,19 @@ class OrderService
             $this->activities->cancelled($order, $actor);
         });
 
+        $this->closeOpenPaymentAttempts($order);
+
         return $order;
+    }
+
+    /**
+     * Tagihan yang masih terbuka ditutup di penyedianya supaya pesanan yang sudah
+     * dibatalkan tidak bisa dibayar lagi. PaymentSettlementService di-resolve di sini,
+     * bukan lewat konstruktor, karena kelas itu sendiri bergantung pada OrderService.
+     */
+    private function closeOpenPaymentAttempts(Order $order): void
+    {
+        app(PaymentSettlementService::class)->closeOpenAttempts($order);
     }
 
     private function generateOrderNumber(): string

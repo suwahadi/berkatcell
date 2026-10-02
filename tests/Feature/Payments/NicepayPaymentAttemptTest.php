@@ -177,4 +177,42 @@ class NicepayPaymentAttemptTest extends TestCase
 
         $this->assertEqualsWithDelta(now()->addMinutes(60)->timestamp, $attempt->expired_at->timestamp, 60);
     }
+
+    public function test_registration_gagal_tidak_membatalkan_tagihan_lama(): void
+    {
+        Http::fake([
+            '*/snap/v1/transactions' => Http::response([
+                'token' => 'snap-token-abc',
+                'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v4/redirection/abc',
+            ], 201),
+            '*/nicepay/direct/v2/registration' => Http::response(['resultCd' => '9108', 'resultMsg' => 'not activated'], 200),
+            '*/v2/*/cancel' => Http::response(['status_code' => '200'], 200),
+        ]);
+        $order = Order::factory()->create(['grand_total' => 1500000]);
+        $va = $this->service->createOrReuseActiveAttempt($order, 'bni_va');
+
+        try {
+            $this->service->createOrReuseActiveAttempt($order, PaymentMethods::INDODANA);
+            $this->fail('Seharusnya melempar BusinessRuleException.');
+        } catch (BusinessRuleException) {
+        }
+
+        $this->assertSame(PaymentAttemptStatus::PENDING, $va->fresh()->status);
+        $this->assertSame($va->id, $order->fresh()->active_payment_attempt_id);
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '/cancel'));
+    }
+
+    public function test_attempt_terbuka_yang_kedaluwarsa_tidak_dipakai_ulang(): void
+    {
+        $this->fakeGateways();
+        $order = Order::factory()->create(['grand_total' => 1500000]);
+        $first = $this->service->createOrReuseActiveAttempt($order, PaymentMethods::INDODANA);
+        $first->update(['expired_at' => now()->subMinute()]);
+
+        $second = $this->service->createOrReuseActiveAttempt($order->fresh(), PaymentMethods::INDODANA);
+
+        $this->assertNotSame($first->id, $second->id);
+        $this->assertSame(PaymentAttemptStatus::SUPERSEDED, $first->fresh()->status);
+        $this->assertSame($order->order_number.'-A2', $second->midtrans_order_id);
+    }
 }

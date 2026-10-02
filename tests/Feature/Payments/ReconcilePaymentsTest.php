@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentAttemptStatus;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Models\PaymentWebhookEvent;
 use App\Services\Payments\PaymentMethods;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -110,5 +111,50 @@ class ReconcilePaymentsTest extends TestCase
 
         $this->assertSame(OrderStatus::PAID, $order->fresh()->status);
         $this->assertSame(PaymentAttemptStatus::PAID, $attempt->fresh()->status);
+    }
+
+    public function test_notifikasi_nicepay_yang_tertunda_diproses_ulang(): void
+    {
+        config([
+            'services.nicepay.enabled' => true,
+            'services.nicepay.is_production' => false,
+            'services.nicepay.imid' => 'TESTIMID01',
+            'services.nicepay.merchant_key' => 'test-merchant-key',
+        ]);
+
+        $order = Order::factory()->create(['grand_total' => 175000]);
+        $attempt = PaymentAttempt::factory()->create([
+            'order_id' => $order->id,
+            'provider' => PaymentMethods::NICEPAY,
+            'midtrans_order_id' => $order->order_number.'-A1',
+            'midtrans_transaction_id' => 'TESTIMID0106202610021015001234',
+            'payment_method' => 'indodana',
+            'status' => PaymentAttemptStatus::SUPERSEDED,
+            'gross_amount' => 175000,
+        ]);
+        $event = PaymentWebhookEvent::query()->create([
+            'provider' => PaymentMethods::NICEPAY,
+            'midtrans_order_id' => $attempt->midtrans_order_id,
+            'transaction_id' => $attempt->midtrans_transaction_id,
+            'event_hash' => 'hash-notifikasi-tertunda',
+            'processing_status' => 'received',
+            'payload' => ['referenceNo' => $attempt->midtrans_order_id],
+        ]);
+        $event->forceFill(['created_at' => now()->subMinutes(30)])->save();
+
+        Http::fake([
+            '*/nicepay/direct/v2/inquiry' => Http::response([
+                'resultCd' => '0000',
+                'resultMsg' => 'SUCCESS',
+                'amt' => '175000',
+                'status' => '0',
+            ], 200),
+        ]);
+
+        $this->artisan('payments:reconcile')->assertSuccessful();
+
+        $this->assertSame(OrderStatus::PAID, $order->fresh()->status);
+        $this->assertSame(PaymentAttemptStatus::PAID, $attempt->fresh()->status);
+        $this->assertSame('processed', $event->fresh()->processing_status);
     }
 }

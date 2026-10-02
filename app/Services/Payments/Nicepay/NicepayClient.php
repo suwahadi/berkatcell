@@ -43,6 +43,10 @@ class NicepayClient
 
     public function notificationTokenIsValid(array $payload): bool
     {
+        if (blank(config('services.nicepay.merchant_key'))) {
+            return false;
+        }
+
         foreach (['tXid', 'amt', 'merchantToken'] as $key) {
             if (blank($payload[$key] ?? null)) {
                 return false;
@@ -96,7 +100,7 @@ class NicepayClient
         $tXid = (string) $attempt->midtrans_transaction_id;
         $amount = (string) (int) $attempt->gross_amount;
 
-        return $this->post('/nicepay/direct/v2/cancel', [
+        $response = $this->post('/nicepay/direct/v2/cancel', [
             'timeStamp' => $timeStamp,
             'tXid' => $tXid,
             'iMid' => $this->merchantId(),
@@ -106,6 +110,16 @@ class NicepayClient
             'amt' => $amount,
             'merchantToken' => $this->token($timeStamp, $this->merchantId(), $tXid, $amount),
         ]);
+
+        if (($response['resultCd'] ?? null) !== '0000') {
+            Log::warning('Nicepay cancel tidak berhasil', [
+                'referenceNo' => $attempt->midtrans_order_id,
+                'resultCd' => $response['resultCd'] ?? null,
+                'resultMsg' => $response['resultMsg'] ?? null,
+            ]);
+        }
+
+        return $response;
     }
 
     public function paymentUrl(): string

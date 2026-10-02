@@ -169,4 +169,22 @@ class NicepayNotificationControllerTest extends TestCase
             'processing_status' => 'ignored',
         ]);
     }
+
+    public function test_inquiry_gagal_membalas_503_agar_dikirim_ulang(): void
+    {
+        $order = Order::factory()->create(['grand_total' => 150000]);
+        $attempt = $this->attemptFor($order);
+        Http::fake(['*/nicepay/direct/v2/inquiry' => Http::response(['error' => 'server'], 500)]);
+
+        $this->post(
+            route('payments.nicepay.notification'),
+            $this->notification(['referenceNo' => $attempt->midtrans_order_id]),
+        )->assertStatus(503);
+
+        $this->assertSame(OrderStatus::PENDING, $order->fresh()->status);
+        $this->assertDatabaseHas('payment_webhook_events', [
+            'midtrans_order_id' => $attempt->midtrans_order_id,
+            'processing_status' => 'received',
+        ]);
+    }
 }

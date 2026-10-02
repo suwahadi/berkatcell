@@ -6,7 +6,10 @@ namespace App\Console\Commands;
 
 use App\Enums\PaymentAttemptStatus;
 use App\Models\PaymentAttempt;
+use App\Models\PaymentWebhookEvent;
+use App\Services\Payments\Nicepay\NicepayPaylaterService;
 use App\Services\Payments\PaymentAttemptService;
+use App\Services\Payments\PaymentMethods;
 use Illuminate\Console\Command;
 
 class ReconcilePayments extends Command
@@ -15,7 +18,7 @@ class ReconcilePayments extends Command
 
     protected $description = 'Sinkronkan status payment attempt pending dengan penyedia pembayarannya.';
 
-    public function handle(PaymentAttemptService $service): int
+    public function handle(PaymentAttemptService $service, NicepayPaylaterService $nicepay): int
     {
         $threshold = now()->subMinutes((int) $this->option('minutes'));
 
@@ -24,17 +27,21 @@ class ReconcilePayments extends Command
             ->where('activated_at', '<=', $threshold)
             ->get();
 
-        if ($attempts->isEmpty()) {
-            $this->info('Tidak ada attempt pending untuk direkonsiliasi.');
-
-            return self::SUCCESS;
-        }
-
         foreach ($attempts as $attempt) {
             rescue(fn () => $service->syncAttempt($attempt));
         }
 
-        $this->info("Rekonsiliasi selesai: {$attempts->count()} attempt diperiksa.");
+        $events = PaymentWebhookEvent::query()
+            ->where('provider', PaymentMethods::NICEPAY)
+            ->where('processing_status', 'received')
+            ->whereBetween('created_at', [now()->subDays(2), $threshold])
+            ->get();
+
+        foreach ($events as $event) {
+            rescue(fn () => $nicepay->reprocessEvent($event));
+        }
+
+        $this->info("Rekonsiliasi selesai: {$attempts->count()} attempt dan {$events->count()} notifikasi tertunda diperiksa.");
 
         return self::SUCCESS;
     }

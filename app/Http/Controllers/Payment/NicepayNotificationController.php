@@ -15,11 +15,11 @@ class NicepayNotificationController extends Controller
     public function __invoke(Request $request, NicepayPaylaterService $service): Response
     {
         try {
-            $service->handleNotification($request->all());
+            $processed = $service->handleNotification($request->all());
         } catch (InvalidWebhookSignatureException) {
             return response('Invalid token', 403);
         }
 
-        return response('OK', 200);
+        return $processed ? response('OK', 200) : response('Retry later', 503);
     }
 }

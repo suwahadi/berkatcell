@@ -184,4 +184,13 @@ class NicepayPaymentControllerTest extends TestCase
 
         $this->assertSame(OrderStatus::PENDING, $order->fresh()->status);
     }
+
+    public function test_pesanan_dibatalkan_tidak_mendapat_form_bayar(): void
+    {
+        $order = Order::factory()->create(['status' => OrderStatus::CANCELLED]);
+        $this->nicepayAttempt($order);
+
+        $this->get(route('payments.nicepay.pay', ['order' => $order->uuid]))
+            ->assertRedirect(route('checkout.success', ['order' => $order->uuid]));
+    }
 }

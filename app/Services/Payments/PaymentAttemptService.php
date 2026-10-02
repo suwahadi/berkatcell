@@ -23,6 +23,11 @@ class PaymentAttemptService
         private readonly OrderActivityService $activities,
     ) {}
 
+    /**
+     * Tagihan lama dibatalkan di penyedianya setelah transaksi selesai. Bila dibatalkan
+     * di dalam transaksi lalu pembuatan tagihan baru gagal, database kembali ke tagihan
+     * lama padahal penyedia sudah membatalkannya.
+     */
     public function createOrReuseActiveAttempt(Order $order, string $paymentMethod): PaymentAttempt
     {
         $provider = PaymentMethods::providerFor($paymentMethod);
@@ -35,7 +40,9 @@ class PaymentAttemptService
             throw new BusinessRuleException('Metode pembayaran tidak didukung.');
         }
 
-        return DB::transaction(function () use ($order, $paymentMethod, $provider): PaymentAttempt {
+        $superseded = null;
+
+        $attempt = DB::transaction(function () use ($order, $paymentMethod, $provider, &$superseded): PaymentAttempt {
             $lockedOrder = Order::query()
                 ->whereKey($order->id)
                 ->lockForUpdate()
@@ -51,13 +58,13 @@ class PaymentAttemptService
 
             $activeAttempt = $lockedOrder->activePaymentAttempt;
 
-            if ($activeAttempt?->isOpen() && $activeAttempt->payment_method === $paymentMethod) {
+            if ($activeAttempt?->isOpen() && ! $activeAttempt->isExpired() && $activeAttempt->payment_method === $paymentMethod) {
                 return $activeAttempt;
             }
 
             if ($activeAttempt?->isOpen()) {
                 $activeAttempt->update(['status' => PaymentAttemptStatus::SUPERSEDED]);
-                $this->settlement->cancelAtGateway($activeAttempt);
+                $superseded = $activeAttempt;
             }
 
             $nextSequence = (int) PaymentAttempt::query()
@@ -86,6 +93,12 @@ class PaymentAttemptService
 
             return $attempt->refresh();
         });
+
+        if ($superseded !== null) {
+            $this->settlement->cancelAtGateway($superseded);
+        }
+
+        return $attempt;
     }
 
     public function syncActiveAttempt(Order $order): void

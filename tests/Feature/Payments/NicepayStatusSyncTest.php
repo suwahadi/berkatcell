@@ -13,6 +13,7 @@ use App\Services\Payments\PaymentMethods;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -21,6 +22,8 @@ class NicepayStatusSyncTest extends TestCase
     use RefreshDatabase;
 
     private NicepayPaylaterService $service;
+
+    private array $inquiry = ['status' => '3', 'amt' => null, 'resultCd' => '0000', 'http' => 200];
 
     protected function setUp(): void
     {
@@ -36,6 +39,20 @@ class NicepayStatusSyncTest extends TestCase
         ]);
 
         Http::preventStrayRequests();
+        Http::fake([
+            '*/nicepay/direct/v2/inquiry' => fn (Request $request) => Http::response([
+                'resultCd' => $this->inquiry['resultCd'],
+                'resultMsg' => 'SUCCESS',
+                'tXid' => $request['tXid'],
+                'referenceNo' => $request['referenceNo'],
+                'amt' => $this->inquiry['amt'] ?? $request['amt'],
+                'status' => $this->inquiry['status'],
+                'payMethod' => '06',
+                'mitraCd' => 'IDNA',
+            ], $this->inquiry['http']),
+            '*/nicepay/direct/v2/cancel' => Http::response(['resultCd' => '0000'], 200),
+            '*/v2/*/cancel' => Http::response(['status_code' => '200'], 200),
+        ]);
         Queue::fake();
 
         $this->service = app(NicepayPaylaterService::class);
@@ -58,22 +75,13 @@ class NicepayStatusSyncTest extends TestCase
         ], $overrides));
     }
 
-    private function fakeInquiry(string $status, ?string $amt = null, string $resultCd = '0000'): void
+    /**
+     * Http::fake memakai stub pertama yang cocok, jadi stub inquiry didaftarkan sekali
+     * di setUp() dan membaca nilai ini; memanggil Http::fake lagi tidak menggantinya.
+     */
+    private function fakeInquiry(string $status, ?string $amt = null, string $resultCd = '0000', int $http = 200): void
     {
-        Http::fake([
-            '*/nicepay/direct/v2/inquiry' => fn (Request $request) => Http::response([
-                'resultCd' => $resultCd,
-                'resultMsg' => 'SUCCESS',
-                'tXid' => $request['tXid'],
-                'referenceNo' => $request['referenceNo'],
-                'amt' => $amt ?? $request['amt'],
-                'status' => $status,
-                'payMethod' => '06',
-                'mitraCd' => 'IDNA',
-            ], 200),
-            '*/nicepay/direct/v2/cancel' => Http::response(['resultCd' => '0000'], 200),
-            '*/v2/*/cancel' => Http::response(['status_code' => '200'], 200),
-        ]);
+        $this->inquiry = compact('status', 'amt', 'resultCd', 'http');
     }
 
     public function test_status_nol_melunasi_order(): void
@@ -118,6 +126,7 @@ class NicepayStatusSyncTest extends TestCase
             $this->service->sync($attempt);
 
             $this->assertSame(PaymentAttemptStatus::PENDING, $attempt->fresh()->status, "status {$status}");
+            $this->assertSame($status, $attempt->fresh()->midtrans_transaction_status, "status {$status}");
             $this->assertSame(OrderStatus::PENDING, $order->fresh()->status, "status {$status}");
         }
     }
@@ -174,6 +183,7 @@ class NicepayStatusSyncTest extends TestCase
             $this->service->sync($attempt);
 
             $this->assertSame(PaymentAttemptStatus::CANCELLED, $attempt->fresh()->status, "status {$status}");
+            $this->assertSame($status, $attempt->fresh()->midtrans_transaction_status, "status {$status}");
             $this->assertSame(OrderStatus::PAID, $order->fresh()->status, "status {$status}");
         }
     }
@@ -187,7 +197,7 @@ class NicepayStatusSyncTest extends TestCase
         $this->fakeInquiry('0', null, '9999');
         $this->service->sync($attempt);
 
-        Http::fake(['*/nicepay/direct/v2/inquiry' => Http::response(['error' => 'server'], 500)]);
+        $this->fakeInquiry('0', null, '0000', 500);
         $this->service->sync($attempt);
 
         $this->assertSame(PaymentAttemptStatus::PENDING, $attempt->fresh()->status);
@@ -217,5 +227,20 @@ class NicepayStatusSyncTest extends TestCase
         $this->assertSame(PaymentAttemptStatus::PAID, $late->fresh()->status);
         $this->assertSame(PaymentAttemptStatus::SUPERSEDED, $open->fresh()->status);
         Http::assertSent(fn (Request $request) => str_contains($request->url(), 'midtrans.com/v2/'.$open->midtrans_order_id.'/cancel'));
+    }
+
+    public function test_inquiry_bukan_0000_dicatat_di_log(): void
+    {
+        Log::spy();
+        $order = Order::factory()->create();
+        $attempt = $this->nicepayAttempt($order);
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+        $this->fakeInquiry('0', null, '9999');
+
+        $this->service->sync($attempt);
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context = []): bool => str_contains($message, 'inquiry') && ($context['resultCd'] ?? null) === '9999')
+            ->once();
     }
 }

@@ -142,6 +142,16 @@ class PaymentSettlementService
         ]);
     }
 
+    public function closeOpenAttempts(Order $order): void
+    {
+        $order->paymentAttempts()->get()->each(function (PaymentAttempt $attempt): void {
+            if ($attempt->isOpen()) {
+                $attempt->update(['status' => PaymentAttemptStatus::CANCELLED]);
+                $this->cancelAtGateway($attempt);
+            }
+        });
+    }
+
     public function cancelAtGateway(PaymentAttempt $attempt): void
     {
         rescue(fn () => match ($attempt->provider) {

@@ -334,6 +334,23 @@ Diuji ke `https://dev.nicepay.co.id` dengan kredensial uji publik `IONPAYTEST`, 
 
 Karena Paylater tidak aktif di akun uji, langkah Payment, Status Inquiry, Cancel, dan notifikasi belum pernah dijalankan terhadap Nicepay. Semuanya baru terverifikasi lewat tes dengan respons tiruan, dan menunggu transaksi sungguhan di langkah 4.
 
+### 13.2 Perubahan dari tinjauan akhir (2 Oktober 2026)
+
+Tinjauan seluruh branch oleh reviewer independen menghasilkan perubahan perilaku berikut. Butir pertama dan ketiga juga berlaku untuk Midtrans.
+
+| Perilaku | Alasan |
+|---|---|
+| Membatalkan pesanan (`OrderService::cancel`) menutup semua attempt yang masih terbuka: status `CANCELLED` dan cancel dikirim ke penyedianya. | Tanpa ini pesanan yang dibatalkan masih bisa dibayar, selama 24 jam untuk Indodana. |
+| Halaman `payments.nicepay.pay` hanya menampilkan form bila pesanan masih menunggu pembayaran. | Pesanan yang dibatalkan sebelumnya masih mendapat form bayar. |
+| Saat pelanggan berganti metode, cancel ke penyedia lama dikirim setelah tagihan baru berhasil dibuat. | Bila tagihan baru gagal dibuat, tagihan lama tetap hidup di penyedia dan di database. |
+| Attempt terbuka yang sudah lewat `expired_at` tidak dipakai ulang; memilih metode yang sama membuat tagihan baru. | Attempt yang inquiry-nya terus gagal tidak lagi mengunci pelanggan. |
+| Notifikasi Nicepay dibalas `503` bila Status Inquiry tidak memberi hasil; event tetap `received`. | Supaya notifikasi dikirim ulang, bukan dianggap selesai. |
+| `payments:reconcile` memproses ulang event Nicepay berstatus `received` yang berumur lebih dari `--minutes` dan kurang dari dua hari. | Pembayaran terlambat pada attempt yang sudah tidak terbuka tidak lagi hilang saat inquiry sempat gagal. |
+| Hasil inquiry dan cancel yang bukan `0000` dicatat di log. | Sebelumnya dibuang diam-diam, padahal keduanya belum pernah dijalankan terhadap Nicepay sungguhan. |
+| Token notifikasi selalu tidak valid bila `merchant_key` kosong. | Dengan kunci kosong siapa pun bisa menghitung token yang cocok. |
+
+Yang sengaja tidak diubah: pembayaran yang masuk untuk pesanan yang sudah dibatalkan tetap menandai pesanan lunas. Belum ada kanal peringatan untuk admin, jadi menahan pesanan di status dibatalkan akan membuat uang pelanggan tidak terlihat oleh siapa pun.
+
 ## 14. Utang yang dicatat
 
 - Kolom `midtrans_order_id`, `midtrans_transaction_id`, `snap_request_payload`, dan `snap_response_payload` kini menyimpan data dua penyedia dengan nama yang hanya menyebut satu. Ganti nama saat ada penyedia ketiga.

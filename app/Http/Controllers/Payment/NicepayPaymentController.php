@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Payment;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
@@ -21,7 +22,8 @@ class NicepayPaymentController extends Controller
         $attempt = $order->activePaymentAttempt;
 
         if (
-            ! $attempt instanceof PaymentAttempt
+            $order->status !== OrderStatus::PENDING
+            || ! $attempt instanceof PaymentAttempt
             || $attempt->provider !== PaymentMethods::NICEPAY
             || ! $attempt->isOpen()
             || $attempt->isExpired()

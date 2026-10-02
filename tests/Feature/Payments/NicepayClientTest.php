@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class NicepayClientTest extends TestCase
@@ -170,5 +171,28 @@ class NicepayClientTest extends TestCase
         $this->assertSame([], $this->client->cancel($this->attempt(['midtrans_transaction_id' => null])));
 
         Http::assertNothingSent();
+    }
+
+    public function test_kunci_kosong_membuat_token_notifikasi_tidak_valid(): void
+    {
+        config(['services.nicepay.merchant_key' => '']);
+
+        $this->assertFalse($this->client->notificationTokenIsValid([
+            'tXid' => 'TX123',
+            'amt' => '150000',
+            'merchantToken' => hash('sha256', 'TESTIMID01'.'TX123'.'150000'),
+        ]));
+    }
+
+    public function test_cancel_yang_ditolak_dicatat_di_log(): void
+    {
+        Log::spy();
+        Http::fake(['*/nicepay/direct/v2/cancel' => Http::response(['resultCd' => '9999', 'resultMsg' => 'ditolak'], 200)]);
+
+        $this->client->cancel($this->attempt());
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context = []): bool => str_contains($message, 'cancel') && ($context['resultCd'] ?? null) === '9999')
+            ->once();
     }
 }

@@ -9,11 +9,19 @@ use App\Models\User;
 use App\Services\Payments\Midtrans\MidtransPaymentAttemptService;
 use App\Services\Payments\PaymentMethods;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class PaymentMethodsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Http::preventStrayRequests();
+    }
 
     public function test_tujuh_kanal_midtrans_tersedia_dengan_urutan_tetap(): void
     {

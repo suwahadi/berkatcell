@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentAttemptStatus;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Services\OrderService;
 use App\Services\Payments\PaymentMethods;
 use App\Services\Payments\PaymentSettlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -128,5 +129,18 @@ class PaymentSettlementServiceTest extends TestCase
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/nicepay/direct/v2/cancel') && $request['tXid'] === 'TX123');
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'midtrans.com'));
+    }
+
+    public function test_membatalkan_pesanan_menutup_attempt_terbuka_di_penyedianya(): void
+    {
+        $order = Order::factory()->create();
+        $attempt = $this->attemptFor($order);
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+
+        app(OrderService::class)->cancel($order->fresh(), 'Admin');
+
+        $this->assertSame(OrderStatus::CANCELLED, $order->fresh()->status);
+        $this->assertSame(PaymentAttemptStatus::CANCELLED, $attempt->fresh()->status);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'midtrans.com/v2/'.$attempt->midtrans_order_id.'/cancel'));
     }
 }

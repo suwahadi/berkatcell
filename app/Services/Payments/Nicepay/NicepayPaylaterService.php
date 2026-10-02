@@ -42,7 +42,11 @@ class NicepayPaylaterService
         $this->applyInquiry($attempt, null);
     }
 
-    public function handleNotification(array $payload): void
+    /**
+     * Mengembalikan false bila status belum bisa dipastikan lewat inquiry, supaya
+     * pemanggil meminta Nicepay mengirim ulang notifikasinya.
+     */
+    public function handleNotification(array $payload): bool
     {
         if (! $this->client->notificationTokenIsValid($payload)) {
             $this->storeEvent($payload)->update([
@@ -56,12 +60,17 @@ class NicepayPaylaterService
         $event = $this->storeEvent($payload);
 
         if (in_array($event->processing_status, self::TERMINAL_EVENT_STATUSES, true)) {
-            return;
+            return true;
         }
 
+        return $this->reprocessEvent($event);
+    }
+
+    public function reprocessEvent(PaymentWebhookEvent $event): bool
+    {
         $attempt = PaymentAttempt::query()
             ->where('provider', PaymentMethods::NICEPAY)
-            ->where('midtrans_order_id', (string) ($payload['referenceNo'] ?? ''))
+            ->where('midtrans_order_id', (string) $event->midtrans_order_id)
             ->first();
 
         if (! $attempt) {
@@ -70,24 +79,30 @@ class NicepayPaylaterService
                 'notes' => 'Payment attempt tidak ditemukan.',
             ]);
 
-            return;
+            return true;
         }
 
-        $this->applyInquiry($attempt, $event);
+        return $this->applyInquiry($attempt, $event);
     }
 
     /**
      * Status lunas hanya diambil dari Status Inquiry. Notifikasi dan callback bisa
      * dipalsukan atau terlambat, jadi keduanya hanya memicu inquiry ini. Bila
-     * inquiry gagal, event dibiarkan berstatus received supaya notifikasi ulang
-     * atau rekonsiliasi memprosesnya lagi.
+     * inquiry gagal, event dibiarkan berstatus received: notifikasi dibalas 503
+     * dan payments:reconcile memprosesnya ulang lewat reprocessEvent().
      */
-    private function applyInquiry(PaymentAttempt $attempt, ?PaymentWebhookEvent $event): void
+    private function applyInquiry(PaymentAttempt $attempt, ?PaymentWebhookEvent $event): bool
     {
         $inquiry = $this->client->inquiry($attempt);
 
         if (($inquiry['resultCd'] ?? null) !== '0000' || ! isset($inquiry['status'])) {
-            return;
+            Log::warning('Nicepay inquiry tanpa hasil', [
+                'referenceNo' => $attempt->midtrans_order_id,
+                'resultCd' => $inquiry['resultCd'] ?? null,
+                'resultMsg' => $inquiry['resultMsg'] ?? null,
+            ]);
+
+            return false;
         }
 
         DB::transaction(function () use ($attempt, $inquiry, $event): void {
@@ -101,6 +116,8 @@ class NicepayPaylaterService
 
             $this->route($order, $locked, $inquiry, $event);
         });
+
+        return true;
     }
 
     private function route(Order $order, PaymentAttempt $attempt, array $inquiry, ?PaymentWebhookEvent $event): void
