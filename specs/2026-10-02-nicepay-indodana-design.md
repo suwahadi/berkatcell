@@ -204,9 +204,10 @@ Nama, email, telepon, dan alamat toko diambil dari setting yang sudah ada: `site
 | `userIP` | IP pelanggan bila IPv4; selain itu `127.0.0.1` |
 | `userAgent` | Header User-Agent, dipotong 255 |
 | `dbProcessUrl` | `route('payments.nicepay.notification')` |
-| `callBackUrl` | `route('payments.nicepay.callback')` |
 | `instmntType`, `instmntMon` | Lihat 7.4 |
 | `merchantToken` | Rumus registration |
+
+`callBackUrl` tidak dikirim di Registration. Dokumentasi menandainya opsional, tetapi lingkungan development Nicepay menolak Registration Paylater yang memuatnya dengan `resultCd 8003` (lihat 13.1). Field itu hanya dikirim di langkah Payment.
 
 ### 7.1 Alamat
 
@@ -318,6 +319,20 @@ Yang diverifikasi pada langkah 4, karena dokumentasi tidak menjawabnya:
 | Zona waktu `timeStamp` | `Asia/Jakarta` | Sesuaikan zona waktu |
 | `cancelType` untuk transaksi belum dibayar | `1` | Sesuaikan kode, atau hilangkan cancel untuk attempt yang belum dibayar |
 | `userIP` untuk pelanggan IPv6 | `127.0.0.1` diterima | Kirim IP server |
+
+### 13.1 Hasil uji asap ke lingkungan development (2 Oktober 2026)
+
+Diuji ke `https://dev.nicepay.co.id` dengan kredensial uji publik `IONPAYTEST`, tanpa transaksi sungguhan.
+
+| Yang diuji | Hasil |
+|---|---|
+| Registration Virtual Account sebagai pembanding (token, `timeStamp` WIB, endpoint, JSON) | `0000 SUCCESS`. Rumus token dan format dasar benar. |
+| Registration Paylater dengan `callBackUrl` | `8003 Order registration data error`. Field dihapus dari payload. |
+| Registration Paylater buatan `NicepayRegistrationPayload`, URL publik | Lolos validasi format, berhenti di `9108` (Paylater tidak aktif di akun uji). Ini batas akun uji, bukan cacat payload. |
+| Registration Paylater dengan `goods_url` atau `sellersUrl` berisi `http://localhost:8000` | `P380 format error [cartData]`. Uji lokal butuh `APP_URL` publik (misalnya tunnel); produksi tidak terdampak. |
+| Contoh `cartData` dari halaman Registration dokumentasi (angka tanpa tanda kutip) | `P380`. Contoh dari halaman Seamless (semua nilai string) lolos. Payload kita memakai string. |
+
+Karena Paylater tidak aktif di akun uji, langkah Payment, Status Inquiry, Cancel, dan notifikasi belum pernah dijalankan terhadap Nicepay. Semuanya baru terverifikasi lewat tes dengan respons tiruan, dan menunggu transaksi sungguhan di langkah 4.
 
 ## 14. Utang yang dicatat
 

@@ -112,7 +112,7 @@ class NicepayRegistrationPayloadTest extends TestCase
         $this->assertSame('Indonesia', $payload['billingCountry']);
         $this->assertSame('Indonesia', $payload['deliveryCountry']);
         $this->assertSame(route('payments.nicepay.notification'), $payload['dbProcessUrl']);
-        $this->assertSame(route('payments.nicepay.callback'), $payload['callBackUrl']);
+        $this->assertArrayNotHasKey('callBackUrl', $payload);
         $this->assertSame(
             hash('sha256', '20261002101500'.'TESTIMID01'.$attempt->midtrans_order_id.'195000'.'test-merchant-key'),
             $payload['merchantToken'],

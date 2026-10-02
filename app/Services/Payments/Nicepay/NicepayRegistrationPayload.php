@@ -56,7 +56,6 @@ class NicepayRegistrationPayload
             'deliveryPostCd' => $address['postcode'],
             'deliveryCountry' => 'Indonesia',
             'dbProcessUrl' => route('payments.nicepay.notification'),
-            'callBackUrl' => route('payments.nicepay.callback'),
             'userIP' => $this->userIp(),
             'userAgent' => mb_substr((string) request()->userAgent(), 0, 255),
             'cartData' => json_encode($this->cart($order), JSON_UNESCAPED_SLASHES),
