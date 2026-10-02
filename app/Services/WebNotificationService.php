@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Notifications\NewOrderNotification;
 use App\Notifications\OrderPaidNotification;
+use App\Notifications\PaidAfterCancelNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 use Throwable;
@@ -29,6 +30,11 @@ final class WebNotificationService
         }
     }
 
+    public function paidAfterCancel(Order $order): void
+    {
+        $this->send($this->admins(), new PaidAfterCancelNotification($order));
+    }
+
     private function send(Collection $recipients, object $notification): void
     {
         if ($recipients->isEmpty()) {
@@ -44,7 +50,7 @@ final class WebNotificationService
 
     private function adminsWithCustomer(Order $order): Collection
     {
-        $recipients = User::query()->where('role', UserRole::ADMIN->value)->get();
+        $recipients = $this->admins();
 
         $customer = $this->customer($order);
 
@@ -53,6 +59,11 @@ final class WebNotificationService
         }
 
         return $recipients;
+    }
+
+    private function admins(): Collection
+    {
+        return User::query()->where('role', UserRole::ADMIN->value)->get();
     }
 
     private function customer(Order $order): ?User

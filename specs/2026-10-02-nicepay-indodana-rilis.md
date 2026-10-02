@@ -172,5 +172,6 @@ Perubahan ini berlaku begitu kode dirilis, walau Nicepay dimatikan:
 ## 9. Yang belum dikerjakan
 
 - Refund otomatis. Pesanan lunas yang dibatalkan admin tetap direfund manual lewat back office Nicepay.
-- Pembayaran yang masuk untuk pesanan yang sudah dibatalkan tetap menandai pesanan Lunas. Belum ada peringatan khusus untuk admin.
-- Halaman pesanan memeriksa status tiap 30 detik selama terbuka, dan tagihan Indodana hidup 24 jam. Batas laju Status Inquiry Nicepay belum diketahui.
+- Batas laju Status Inquiry Nicepay belum diketahui. Halaman pesanan memeriksa status tagihan Indodana tiap 120 detik selama terbuka (tagihan Midtrans tetap tiap 30 detik).
+
+Pembayaran yang masuk untuk pesanan yang sudah dibatalkan tetap menandai pesanan Lunas, karena stok dan kuota voucher sudah dikembalikan saat pembatalan. Admin mendapat notifikasi "Pembayaran masuk untuk pesanan yang dibatalkan" di lonceng, dan aktivitas pesanan mencatat "Perlu Ditinjau". Putuskan per kasus: kirim barangnya bila stok masih ada, atau refund.

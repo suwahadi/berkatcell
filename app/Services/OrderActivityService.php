@@ -88,6 +88,22 @@ class OrderActivityService
         );
     }
 
+    /**
+     * Pembatalan sudah mengembalikan stok dan kuota voucher, jadi pesanan yang lunas
+     * setelah dibatalkan tidak boleh langsung dikirim tanpa diperiksa admin.
+     */
+    public function paidAfterCancel(Order $order, ?string $actor = null): void
+    {
+        $this->log(
+            $order,
+            OrderActivityType::NEEDS_REVIEW,
+            $actor ?? 'Sistem',
+            'Pembayaran masuk setelah pesanan dibatalkan. Stok dan kuota voucher sudah dikembalikan; tinjau sebelum mengirim atau refund.',
+        );
+
+        $this->web->paidAfterCancel($order);
+    }
+
     public function paymentReversed(Order $order, string $reason, ?string $actor = null): void
     {
         $this->log(

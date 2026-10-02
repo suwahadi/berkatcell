@@ -193,4 +193,19 @@ class NicepayInvoicePageTest extends TestCase
 
         $this->assertDatabaseCount('payment_attempts', 0);
     }
+
+    public function test_polling_lebih_jarang_untuk_tagihan_indodana(): void
+    {
+        $order = $this->order();
+        $this->activeNicepayAttempt($order);
+
+        Livewire::test(self::COMPONENT, ['order' => $order])
+            ->assertSeeHtml('wire:poll.120s="refreshStatus"');
+    }
+
+    public function test_polling_tetap_30_detik_tanpa_tagihan_indodana(): void
+    {
+        Livewire::test(self::COMPONENT, ['order' => $this->order()])
+            ->assertSeeHtml('wire:poll.30s="refreshStatus"');
+    }
 }

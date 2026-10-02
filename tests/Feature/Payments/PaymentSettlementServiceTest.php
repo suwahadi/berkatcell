@@ -8,12 +8,15 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentAttemptStatus;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Models\User;
+use App\Notifications\PaidAfterCancelNotification;
 use App\Services\OrderService;
 use App\Services\Payments\PaymentMethods;
 use App\Services\Payments\PaymentSettlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -158,5 +161,46 @@ class PaymentSettlementServiceTest extends TestCase
             ->withArgs(fn (string $message, array $context = []): bool => $message === 'Midtrans: nominal pembayaran tidak cocok dengan total order.'
                 && ($context['midtrans_order_id'] ?? null) === $attempt->midtrans_order_id)
             ->once();
+    }
+
+    public function test_pembayaran_untuk_pesanan_dibatalkan_memberi_tahu_admin(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->admin()->create();
+        $customer = User::factory()->create();
+        $order = Order::factory()->create([
+            'status' => OrderStatus::CANCELLED,
+            'customer_email' => $customer->email,
+            'grand_total' => 150000,
+        ]);
+        $attempt = $this->attemptFor($order, 1, PaymentAttemptStatus::CANCELLED);
+
+        $this->service->paid($order->fresh(), $attempt, 150000, 'Tes (otomatis)');
+
+        $this->assertSame(OrderStatus::PAID, $order->fresh()->status);
+        Notification::assertSentTo($admin, PaidAfterCancelNotification::class);
+        Notification::assertNotSentTo($customer, PaidAfterCancelNotification::class);
+        $this->assertDatabaseHas('order_activities', [
+            'order_id' => $order->id,
+            'type' => 'perlu_ditinjau',
+        ]);
+    }
+
+    public function test_pelunasan_biasa_tidak_memicu_peringatan_admin(): void
+    {
+        Notification::fake();
+        User::factory()->admin()->create();
+        $order = Order::factory()->create(['grand_total' => 150000]);
+        $attempt = $this->attemptFor($order);
+        $order->update(['active_payment_attempt_id' => $attempt->id]);
+
+        $this->service->paid($order->fresh(), $attempt, 150000, 'Tes (otomatis)');
+
+        $this->assertSame(OrderStatus::PAID, $order->fresh()->status);
+        Notification::assertSentTimes(PaidAfterCancelNotification::class, 0);
+        $this->assertDatabaseMissing('order_activities', [
+            'order_id' => $order->id,
+            'type' => 'perlu_ditinjau',
+        ]);
     }
 }

@@ -363,7 +363,9 @@ Tindak lanjut temuan kecil dari tinjauan yang sama:
 
 Panduan rilis untuk produksi ada di `specs/2026-10-02-nicepay-indodana-rilis.md`.
 
-Yang sengaja tidak diubah: pembayaran yang masuk untuk pesanan yang sudah dibatalkan tetap menandai pesanan lunas. Belum ada kanal peringatan untuk admin, jadi menahan pesanan di status dibatalkan akan membuat uang pelanggan tidak terlihat oleh siapa pun.
+Pembayaran yang masuk untuk pesanan yang sudah dibatalkan tetap menandai pesanan lunas, supaya uang pelanggan terlihat di daftar pesanan. Sejak tindak lanjut kedua, kejadian itu juga memberi tahu admin: notifikasi `PaidAfterCancelNotification` (hanya ke admin) dan aktivitas pesanan bertipe "Perlu Ditinjau" lewat `OrderActivityService::paidAfterCancel()`.
+
+Halaman invoice memeriksa status tiap 120 detik untuk tagihan Nicepay dan tetap 30 detik untuk Midtrans, karena tagihan Indodana hidup 24 jam dan setiap polling memanggil Status Inquiry.
 
 ## 14. Utang yang dicatat
 

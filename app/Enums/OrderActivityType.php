@@ -12,6 +12,7 @@ enum OrderActivityType: string
     case SHIPPED = 'dikirim';
     case CANCELLED = 'dibatalkan';
     case PAYMENT_FAILED = 'pembayaran_gagal';
+    case NEEDS_REVIEW = 'perlu_ditinjau';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum OrderActivityType: string
             self::SHIPPED => 'Pesanan Dikirim',
             self::CANCELLED => 'Pesanan Dibatalkan',
             self::PAYMENT_FAILED => 'Pembayaran Gagal',
+            self::NEEDS_REVIEW => 'Perlu Ditinjau',
         };
     }
 
@@ -34,6 +36,7 @@ enum OrderActivityType: string
             self::SHIPPED => 'sky',
             self::CANCELLED => 'rose',
             self::PAYMENT_FAILED => 'rose',
+            self::NEEDS_REVIEW => 'amber',
         };
     }
 
@@ -46,6 +49,7 @@ enum OrderActivityType: string
             self::SHIPPED => 'truck',
             self::CANCELLED => 'x-circle',
             self::PAYMENT_FAILED => 'exclamation-triangle',
+            self::NEEDS_REVIEW => 'exclamation-triangle',
         };
     }
 }

@@ -68,6 +68,15 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
         $this->startPayment($service, $attempt->payment_method);
     }
 
+    /**
+     * Tagihan Indodana hidup 24 jam dan setiap polling memanggil Status Inquiry Nicepay,
+     * jadi jedanya lebih panjang daripada tagihan Midtrans yang hanya hidup beberapa menit.
+     */
+    public function pollSeconds(): int
+    {
+        return $this->attempt()?->provider === PaymentMethods::NICEPAY ? 120 : 30;
+    }
+
     public function startChangeMethod(): void
     {
         $this->changingMethod = true;
@@ -180,7 +189,7 @@ new #[Title('Pesanan Berhasil')] #[Layout('layouts::storefront')] class extends 
             @else
                 <div
                     class="space-y-6"
-                    wire:poll.30s="refreshStatus"
+                    wire:poll.{{ $this->pollSeconds() }}s="refreshStatus"
                     x-data
                     @snap-pay.window="
                         if (! window.snap) { return; }

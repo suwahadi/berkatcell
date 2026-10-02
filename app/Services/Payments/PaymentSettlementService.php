@@ -86,7 +86,13 @@ class PaymentSettlementService
             'active_payment_attempt_id' => $attempt->id,
         ])->save();
 
+        $wasCancelled = $order->status === OrderStatus::CANCELLED;
+
         $this->orderService->markAsPaid($order, $actor);
+
+        if ($wasCancelled) {
+            $this->activities->paidAfterCancel($order, $actor);
+        }
 
         $this->cancelOtherOpenAttempts($order, $attempt);
 

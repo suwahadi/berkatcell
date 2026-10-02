@@ -8,6 +8,7 @@ use App\Livewire\NotificationBell;
 use App\Models\Order;
 use App\Models\User;
 use App\Notifications\NewOrderNotification;
+use App\Notifications\PaidAfterCancelNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -28,6 +29,19 @@ class NotificationBellTest extends TestCase
 
         Livewire::test(NotificationBell::class)
             ->assertSee('Pesanan baru')
+            ->assertSee($order->order_number);
+    }
+
+    public function test_lonceng_menampilkan_peringatan_pembayaran_untuk_pesanan_dibatalkan(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $order = Order::factory()->create();
+        $admin->notify(new PaidAfterCancelNotification($order));
+
+        $this->actingAs($admin);
+
+        Livewire::test(NotificationBell::class)
+            ->assertSee('Pembayaran masuk untuk pesanan yang dibatalkan')
             ->assertSee($order->order_number);
     }
 
