@@ -31,6 +31,10 @@ class PaymentAttemptService
             throw new BusinessRuleException('Metode pembayaran tidak didukung.');
         }
 
+        if ($provider === PaymentMethods::NICEPAY && ! PaymentMethods::nicepayConfigured()) {
+            throw new BusinessRuleException('Metode pembayaran tidak didukung.');
+        }
+
         return DB::transaction(function () use ($order, $paymentMethod, $provider): PaymentAttempt {
             $lockedOrder = Order::query()
                 ->whereKey($order->id)
@@ -109,12 +113,15 @@ class PaymentAttemptService
     private function start(string $provider, Order $order, PaymentAttempt $attempt, string $paymentMethod): void
     {
         match ($provider) {
-            PaymentMethods::MIDTRANS => $this->midtrans->start($order, $attempt, $paymentMethod),
+            PaymentMethods::NICEPAY => $this->nicepay->start($order, $attempt),
+            default => $this->midtrans->start($order, $attempt, $paymentMethod),
         };
     }
 
     private function expiryMinutes(string $provider): int
     {
-        return order_expiry_minutes();
+        return $provider === PaymentMethods::NICEPAY
+            ? max(1, (int) config('services.nicepay.expiry_minutes', 1440))
+            : order_expiry_minutes();
     }
 }

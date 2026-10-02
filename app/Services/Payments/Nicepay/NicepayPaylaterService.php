@@ -21,7 +21,21 @@ class NicepayPaylaterService
     public function __construct(
         private readonly NicepayClient $client,
         private readonly PaymentSettlementService $settlement,
+        private readonly NicepayRegistrationPayload $payload,
     ) {}
+
+    public function start(Order $order, PaymentAttempt $attempt): void
+    {
+        $payload = $this->payload->build($order, $attempt);
+        $response = $this->client->register($payload);
+
+        $attempt->update([
+            'status' => PaymentAttemptStatus::PENDING,
+            'midtrans_transaction_id' => $response['tXid'],
+            'snap_request_payload' => $payload,
+            'snap_response_payload' => $response,
+        ]);
+    }
 
     public function sync(PaymentAttempt $attempt): void
     {
