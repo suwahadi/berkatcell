@@ -105,7 +105,7 @@ Ini transaksi sungguhan dengan uang sungguhan. Registration, Payment, Status Inq
 | Apakah baris ongkir dan diskon diterima? | Tombol Bayar tidak memunculkan "Gagal memulai pembayaran"; rincian di halaman Indodana | Ubah `NicepayRegistrationPayload::cart()` agar selalu mengirim satu baris senilai total |
 | Apakah form POST membuka halaman Indodana? | Setelah halaman "Lanjut ke Indodana", browser sampai ke Indodana | Ganti form jadi redirect GET di `NicepayPaymentController::redirect()` |
 | Apakah notifikasi sampai? | Tabel `payment_webhook_events`, baris dengan `provider = nicepay` | Periksa apakah firewall memblokir IP Nicepay (bagian 5) |
-| Apakah Nicepay mengirim ulang notifikasi yang sama? | Baris `payment_webhook_events` yang identik muncul berkali-kali | Sesuaikan isi balasan di `NicepayNotificationController` |
+| Apakah Nicepay mengirim ulang notifikasi yang sama? | Log akses server: `POST /payments/nicepay/notification` berulang tiap menit. Tabel `payment_webhook_events` tidak menunjukkannya, karena kiriman ulang memakai baris yang sama. Di sandbox: paling banyak tiga kiriman ulang, berhenti begitu dibalas `200` | Sesuaikan isi balasan di `NicepayNotificationController` |
 | Apakah zona waktu `timeStamp` benar? | Tidak ada penolakan soal waktu di `storage/logs/laravel.log` | Ganti zona di `NicepayClient::timestamp()` |
 | Apakah cancel diterima untuk tagihan yang belum dibayar? | Buat pesanan kedua, pilih Indodana, lalu ganti ke VA. Cari "Nicepay cancel tidak berhasil" di log | Bila hanya ditolak, tidak perlu perubahan. Bila kodenya salah, ganti `cancelType` di `NicepayClient::cancel()` |
 
@@ -128,6 +128,7 @@ Semua kegagalan Nicepay dicatat di `storage/logs/laravel.log`. `merchantKey` tid
 | "Gagal memulai pembayaran" setelah menekan Bayar | `Nicepay registration gagal` beserta `resultCd` dan `resultMsg` | `9108`: Paylater belum aktif di akun. `8003` atau `P380`: format payload ditolak. `9010`: `merchantKey` atau `iMid` salah. |
 | Pesanan tidak melunas padahal sudah bayar | `Nicepay inquiry tanpa hasil` | Status Inquiry gagal atau ditolak. Rekonsiliasi mencoba lagi tiap 15 menit: tagihan terbuka sampai masa berlakunya habis, notifikasi yang tertunda sampai dua hari. |
 | Tidak ada baris baru di `payment_webhook_events` | Tidak ada | Notifikasi tidak sampai. Pesanan tetap melunas lewat polling halaman dan rekonsiliasi. Periksa firewall. |
+| Baris `payment_webhook_events` tertahan di `received` | `Nicepay inquiry tanpa hasil` | Notifikasi sampai tetapi inquiry gagal, jadi dibalas `503`. Nicepay mengirim ulang tiap menit, paling banyak tiga kali; setelah itu rekonsiliasi yang memprosesnya. |
 | Baris `payment_webhook_events` berstatus `invalid_signature` | Tidak ada | Token tidak cocok: `merchantKey` di `.env` salah, atau permintaan bukan dari Nicepay. |
 | Halaman redirect tampil tanpa gaya | Tidak ada | `npm run build` belum dijalankan. Tombolnya tetap berfungsi. |
 | Nicepay tidak bisa dihubungi | `Nicepay tidak dapat dihubungi` atau `Nicepay membalas error HTTP` | Masalah jaringan atau Nicepay sedang gangguan. |

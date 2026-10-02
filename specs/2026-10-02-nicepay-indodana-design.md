@@ -351,8 +351,8 @@ Kesimpulan 13.1 bahwa Paylater tidak bisa diuji di sandbox hanya berlaku untuk `
 | Cancel untuk tagihan belum dibayar | Dibalas `9528 Transaction not found`. Tagihan yang digantikan tetap bisa dibayar di Indodana sampai kedaluwarsa; pembayaran terlambat ditangani logika pelunasan. Kode `9528` tidak lagi dicatat sebagai peringatan. |
 | Cancel untuk transaksi lunas | Berhasil (`0000 SUCCESS`) bila dikirim beberapa menit setelah pembayaran; inquiry lalu berstatus `2` (refund). Satu dan tiga menit setelah pembayaran sandbox masih membalas `9302 Server is busy`; sembilan menit setelahnya berhasil. Parameter kita sama dengan dokumentasi Cancel Paylater. |
 | Apakah refund memicu notifikasi? | Tidak ada notifikasi yang tiba dalam enam menit setelah cancel berhasil. Refund baru tercatat di aplikasi bila ada yang memicu inquiry untuk attempt itu. |
-| `userIP` untuk IPv6 | Belum diuji. |
-| Apakah Nicepay mengirim ulang notifikasi yang dibalas bukan 200? | Belum diketahui. |
+| `userIP` untuk IPv6 | Cadangan `127.0.0.1` diterima. IPv6 sendiri juga diterima di Registration dan Payment, dalam bentuk ringkas, bentuk penuh 39 karakter, dan `::1`. Kode tetap mengirim `127.0.0.1` untuk pelanggan IPv6; mengirim alamat aslinya cukup dengan melepas `FILTER_FLAG_IPV4` di `NicepayRegistrationPayload::userIp()`. |
+| Apakah Nicepay mengirim ulang notifikasi yang dibalas bukan 200? | Ya, paling banyak tiga kali, dan berhenti begitu dibalas `200`. Kiriman ulang berjalan pada detik ke-6 tiap menit, jadi seluruh jendela kirim-ulang hanya sekitar tiga menit. Berlaku untuk `503` maupun `403`. |
 
 Uji di atas memanggil kelas `NicepayClient` dan `NicepayRegistrationPayload` langsung. Setelah itu satu pembayaran dijalankan lewat aplikasi sendiri, dari halaman pesanan di URL tunnel sampai pesanan berstatus Lunas:
 
@@ -370,8 +370,21 @@ Tiga skenario berikutnya juga dijalankan lewat aplikasi di sandbox, masing-masin
 
 Transaksi lunas dari skenario pertama lalu di-cancel lewat API dan disinkronkan lewat `NicepayPaylaterService::sync()`: attempt menjadi `cancelled`, aktivitas mencatat "Pembayaran dibatalkan di penyedia (refund). Perlu ditinjau admin.", dan pesanan tetap Lunas sesuai rancangan `PaymentSettlementService::reversed()`.
 
-Dua hal yang perlu diingat dari hasil ini:
+Kirim-ulang notifikasi diuji dengan membuat Status Inquiry gagal untuk satu attempt (tXid di database diganti sementara), membayar di Indodana tanpa kembali ke halaman merchant, lalu memantau permintaan di inspector tunnel:
 
+| Waktu | Kejadian |
+|---|---|
+| 16:24:44 | Pembayaran selesai di Indodana. |
+| 16:24:53 | Notifikasi pertama. Inquiry gagal, dibalas `503`, event tersimpan `received`. |
+| 16:25:06 | Kiriman ulang pertama, dibalas `503`. Setelah ini tXid dipulihkan. |
+| 16:26:06 | Kiriman ulang kedua, dibalas `200`. Event yang sama menjadi `processed` dan pesanan Lunas. |
+| 16:27 dan seterusnya | Tidak ada kiriman lagi. |
+
+Pada uji sebelumnya, saat server lokal belum punya `merchantKey` sehingga token ditolak, empat kiriman dibalas `403` (14:34:18, 14:35:06, 14:36:06, 14:37:07) lalu Nicepay berhenti. Notifikasi sandbox datang dari `103.20.51.39`.
+
+Tiga hal yang perlu diingat dari hasil ini:
+
+- Balasan `503` bekerja seperti yang dirancang, tetapi hanya menutup gangguan sekitar tiga menit. Gangguan yang lebih lama ditutup oleh callback, polling halaman pesanan, dan `payments:reconcile`.
 - Membatalkan pesanan atau berganti metode tidak mematikan tagihan Indodana. Tagihan itu hidup sampai kedaluwarsa (24 jam), jadi peringatan "Perlu Ditinjau" adalah jalur yang benar-benar terpakai, bukan kasus langka.
 - Tidak ada yang memicu inquiry untuk attempt yang sudah lunas. Rekonsiliasi hanya memeriksa attempt terbuka, dan sandbox tidak mengirim notifikasi refund. Refund yang dilakukan admin di back office Nicepay karena itu tidak muncul sendiri di aktivitas pesanan.
 
