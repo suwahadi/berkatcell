@@ -284,6 +284,8 @@ Whitelist IP tidak dipasang. `bootstrap/app.php` mempercayai header proxy dari a
 - Kartu attempt aktif untuk Indodana menampilkan nama metode dan masa berlaku, tanpa nomor VA.
 - Halaman redirect: satu kalimat "Mengarahkan ke Indodana…" dan tombol manual untuk browser tanpa JavaScript.
 
+Sejak 2 Oktober 2026 kisi metode dan kartu attempt aktif memakai logo asli, bukan label berwarna. Kunci `brand` di `PaymentMethods::METHODS` diganti `logo` (nama berkas di `public/images/payments/`), dan `PaymentMethods::logoUrl()` mengembalikan URL-nya. Kisi berisi 2 kolom di ponsel dan 4 kolom mulai lebar `sm`. Teks sekunder di halaman pesanan memakai `text-ink/65` atau lebih gelap, dan hijau untuk teks kecil memakai `leaf-dark`, supaya lolos kontras WCAG AA.
+
 ## 12. Pengujian
 
 Semua tes memakai `Http::fake()`. Tidak ada panggilan nyata.

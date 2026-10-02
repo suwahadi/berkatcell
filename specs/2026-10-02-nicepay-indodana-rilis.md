@@ -11,10 +11,11 @@ Fitur ini mati secara default. Selama `NICEPAY_ENABLED=false`, pelanggan tidak m
 - Kota, provinsi, dan kode pos toko. Dipakai sebagai data penjual dan sebagai alamat untuk pesanan ambil di toko.
 - Cadangan database terbaru.
 - Akun admin toko, untuk transaksi uji.
+- Akses SSH ke server Hostinger dengan SSH key, dan catatan hasil "kenali server" (bagian 11.1 dan 11.2). Keduanya cukup dikerjakan sekali.
 
 ## 2. Urutan rilis
 
-Jalankan dari folder aplikasi di server, berurutan.
+Jalankan dari folder aplikasi di server, berurutan. Server produksi memakai Hostinger shared hosting, yang berbeda dari server biasa di beberapa langkah: Composer, build aset, cron, dan cache. Baca bagian 11.3 sebelum mulai; langkah di bawah menunjuk ke sana bila ada bedanya.
 
 1. Cadangkan database.
 2. Ambil kode terbaru (unggah berkas, atau lewat git).
@@ -34,20 +35,22 @@ git reset --hard origin/main
 composer install --no-dev --optimize-autoloader
 ```
 
+Di Hostinger perintahnya bisa `composer2`, dan bisa berhenti di tahap skrip; lihat 11.3.
+
 4. Jalankan migrasi. Langkah ini harus selesai sebelum kode baru melayani pembayaran: kode baru menulis kolom `provider`, jadi tanpa migrasi pembayaran Midtrans ikut gagal.
 
 ```bash
 php artisan migrate --force
 ```
 
-5. Bangun aset. Folder `public/build` tidak ikut di git, dan halaman redirect memakai kelas CSS yang belum ada di build lama.
+5. Bangun aset. Folder `public/build` tidak ikut di git, dan halaman redirect serta halaman pesanan memakai kelas CSS yang belum ada di build lama.
 
 ```bash
 npm ci
 npm run build
 ```
 
-Kalau server tidak punya Node, jalankan `npm run build` di komputer lain lalu unggah folder `public/build`.
+Kalau server tidak punya Node, jalankan `npm run build` di komputer lain lalu unggah folder `public/build`. Perintah unggahnya ada di 11.3.
 
 6. Tambahkan ke `.env`:
 
@@ -76,7 +79,7 @@ php artisan queue:restart
 
 Lewati perintah `*:cache` yang biasanya tidak Anda pakai di server ini.
 
-8. Periksa cron. Rekonsiliasi berganti nama dari `payments:midtrans:reconcile` menjadi `payments:reconcile`. Cron yang menjalankan `schedule:run` tidak perlu diubah. Cron yang memanggil nama lama secara langsung harus diganti.
+8. Periksa cron. Rekonsiliasi berganti nama dari `payments:midtrans:reconcile` menjadi `payments:reconcile`. Cron yang menjalankan `schedule:run` tidak perlu diubah. Cron yang memanggil nama lama secara langsung harus diganti. Di Hostinger cron hanya bisa dilihat dan diubah lewat hPanel (11.3).
 
 ## 3. Periksa sebelum transaksi uji
 
@@ -87,6 +90,7 @@ Lewati perintah `*:cache` yang biasanya tidak Anda pakai di server ini.
 | Midtrans tidak terganggu | Buat pesanan kecil, pilih salah satu Virtual Account | Popup Snap muncul dan menampilkan nomor VA |
 | Indodana tersembunyi dari pelanggan | Buka halaman pesanan tanpa login | Tidak ada kartu Indodana |
 | Indodana terlihat oleh admin | Buka halaman pesanan yang sama setelah login sebagai admin | Kartu Indodana ada di daftar metode |
+| Logo metode pembayaran tampil | Buka halaman pesanan yang belum dibayar, di ponsel dan di komputer | Tiap kartu metode menampilkan logo, tidak ada ikon gambar rusak (bagian 12) |
 
 Kartu Indodana hanya muncul untuk pesanan dengan total Rp10.000 sampai Rp50.000.000 dan email pelanggan paling panjang 40 karakter.
 
@@ -207,3 +211,144 @@ Tagihan Indodana tidak bisa dimatikan dari sisi kita. Setelah pelanggan berganti
 - Batas laju Status Inquiry Nicepay belum diketahui. Halaman pesanan memeriksa status tagihan Indodana tiap 120 detik selama terbuka (tagihan Midtrans tetap tiap 30 detik).
 
 Pembayaran yang masuk untuk pesanan yang sudah dibatalkan tetap menandai pesanan Lunas, karena stok dan kuota voucher sudah dikembalikan saat pembatalan. Admin mendapat notifikasi "Pembayaran masuk untuk pesanan yang dibatalkan" di lonceng, dan aktivitas pesanan mencatat "Perlu Ditinjau". Putuskan per kasus: kirim barangnya bila stok masih ada, atau refund.
+
+## 11. Server Hostinger dan akses SSH
+
+Produksi berjalan di Hostinger shared hosting. Semua domain dalam satu akun berbagi satu pengguna Linux, tanpa akses root. Bagian ini ditulis sebelum ada akses ke server itu: nilai dalam kurung sudut diisi dari hPanel, dan beberapa hal baru pasti setelah 11.2 dijalankan.
+
+### 11.1 Pasang SSH key (sekali per komputer)
+
+Dengan SSH key, perintah rilis bisa dijalankan dari terminal komputer kerja tanpa password dan tanpa membuka hPanel.
+
+1. Di komputer yang dipakai merilis, buat pasangan kunci khusus untuk server ini. Isi passphrase saat diminta.
+
+```bash
+ssh-keygen -t ed25519 -C "berkatcell-hostinger" -f ~/.ssh/berkatcell_hostinger
+```
+
+Hasilnya dua berkas di folder `.ssh` (di Windows: `C:\Users\<nama>\.ssh\`): `berkatcell_hostinger` adalah kunci privat dan tidak pernah keluar dari komputer ini, `berkatcell_hostinger.pub` adalah kunci publik.
+
+2. Di hPanel buka Websites, Dashboard di sebelah situsnya, lalu SSH Access. Nyalakan SSH, catat IP, port, dan username. Tekan Add SSH key, beri nama, dan tempel seluruh isi `berkatcell_hostinger.pub`.
+3. Tambahkan ke `~/.ssh/config` di komputer kerja:
+
+```
+Host berkatcell-prod
+    HostName <IP dari hPanel>
+    Port <port dari hPanel>
+    User <username dari hPanel>
+    IdentityFile ~/.ssh/berkatcell_hostinger
+    IdentitiesOnly yes
+```
+
+Port SSH hosting web Hostinger biasanya `65002`, bukan `22`. Pakai angka yang tampil di hPanel.
+
+4. Uji sambungannya:
+
+```bash
+ssh berkatcell-prod "php -v"
+```
+
+Aturan memegang kunci:
+
+- Kunci privat dan password hPanel tidak masuk repo, chat, atau tiket. Yang dibagikan ke Hostinger hanya berkas `.pub`.
+- Satu kunci untuk satu komputer. Hapus kuncinya dari hPanel saat komputer diganti atau orangnya tidak lagi mengurus server.
+- Kunci ini membuka seluruh akun, bukan hanya berkatcell: semua situs di akun itu berada di bawah pengguna Linux yang sama.
+- Jangan mengubah pengaturan PHP lewat SSH. Di Hostinger pengaturan PHP berlaku untuk seluruh akun, jadi salah ubah bisa menjatuhkan situs lain.
+
+Kalau server mengambil kode dari GitHub lewat git dan repo-nya privat, server butuh kuncinya sendiri. Jalankan di server:
+
+```bash
+ssh-keygen -t ed25519 -C "berkatcell-server" -f ~/.ssh/github_berkatcell -N ""
+cat ~/.ssh/github_berkatcell.pub
+```
+
+Tempel hasil `cat` di GitHub: repo `suwahadi/berkatcell`, Settings, Deploy keys, Add deploy key, tanpa mencentang write access. Kunci ini tanpa passphrase supaya `git fetch` bisa jalan sendiri, jadi biarkan hanya-baca dan hanya untuk repo ini. Lalu di server:
+
+```bash
+printf 'Host github.com\n    IdentityFile ~/.ssh/github_berkatcell\n    IdentitiesOnly yes\n' >> ~/.ssh/config
+ssh -T git@github.com
+git -C <folder aplikasi> remote set-url origin git@github.com:suwahadi/berkatcell.git
+```
+
+### 11.2 Kenali server (sekali, catat hasilnya)
+
+Jalankan setelah 11.1, lalu isi kolom terakhir tabel di bawah. Tidak ada perintah di sini yang mengubah apa pun.
+
+```bash
+ssh berkatcell-prod
+ls -la ~/domains/<domain>/
+php -v
+ls /opt/alt | grep php
+composer --version; composer2 --version
+git --version
+node -v; npm -v
+php -r 'var_dump(function_exists("proc_open"));'
+grep -n "^QUEUE_CONNECTION\|^APP_ENV\|^APP_DEBUG" <folder aplikasi>/.env
+```
+
+| Yang dicari | Kenapa penting | Hasil di server ini |
+|---|---|---|
+| Letak folder aplikasi, dan apakah `public_html` itu symlink ke `public/` atau salinan isinya | Kalau symlink, berkas baru di `public/` (logo, `build`) langsung tampil. Kalau salinan, berkas itu harus disalin juga ke `public_html` setiap rilis | belum diisi |
+| Versi `php` di SSH | Aplikasi butuh PHP 8.3 atau lebih baru. Kalau `php` lebih tua, pakai biner berversi, biasanya `/opt/alt/php83/usr/bin/php`, di semua perintah `php artisan` dan di cron | belum diisi |
+| `composer` atau `composer2` | Butuh Composer 2. Di Hostinger `composer` sering masih versi 1 | belum diisi |
+| Ada `node` dan `npm` atau tidak | Menentukan aset dibangun di server atau di komputer kerja | belum diisi |
+| Hasil `proc_open` | Kalau `false`, skrip Composer dan `schedule:run` tidak jalan seperti biasa (11.3) | belum diisi |
+| Isi halaman Cron Jobs di hPanel | Perintah `crontab` tidak ada di Hostinger, jadi `crontab -l` yang gagal bukan bukti cron kosong | belum diisi |
+| `QUEUE_CONNECTION` | Kalau `database`, email pesanan baru terkirim bila ada yang menjalankan antrean | belum diisi |
+
+### 11.3 Penyesuaian langkah rilis
+
+| Langkah di bagian 2 | Di Hostinger |
+|---|---|
+| 3. Composer | Pakai `composer2 install --no-dev --optimize-autoloader`. Kalau berhenti dengan pesan soal `proc_open`, ulangi dengan tambahan `--no-scripts`, lalu jalankan `php artisan package:discover --ansi` |
+| 5. Bangun aset | Kalau server tidak punya Node, bangun di komputer kerja dari commit yang sama dengan server, lalu unggah (perintah di bawah) |
+| 7. `queue:restart` | Hanya berpengaruh kalau ada pekerja antrean yang berjalan terus. Dengan antrean lewat cron, perintah ini aman tapi tidak diperlukan |
+| 8. Cron | Diatur di hPanel: Advanced, Cron Jobs, tipe Custom. Jam server UTC |
+
+Membangun aset di komputer kerja lalu mengunggahnya:
+
+```bash
+git checkout main
+git pull
+npm ci
+npm run build
+scp -r public/build berkatcell-prod:<folder aplikasi>/public/
+ssh berkatcell-prod "cd <folder aplikasi> && php artisan view:cache"
+```
+
+Build tidak membawa nilai `.env` lokal selain nama aplikasi, jadi aman dijalankan dari komputer yang `.env`-nya berisi pengaturan sandbox.
+
+Cron yang dibutuhkan aplikasi, dengan path lengkap ke `php` dan ke `artisan`:
+
+| Jadwal | Perintah | Untuk |
+|---|---|---|
+| `* * * * *` | `/usr/bin/php /home/<username>/domains/<domain>/<folder aplikasi>/artisan schedule:run` | Rekonsiliasi pembayaran tiap 15 menit |
+| `* * * * *` | `/usr/bin/php /home/<username>/domains/<domain>/<folder aplikasi>/artisan queue:work --stop-when-empty --max-time=50` | Mengirim email dari antrean, bila `QUEUE_CONNECTION=database` dan belum ada yang menjalankannya |
+
+Sebelum mengandalkan cron pertama, jalankan sekali lewat SSH: `php artisan schedule:run`. Kalau gagal dengan pesan soal `proc_open`, ganti baris itu dengan `*/15 * * * *` dan perintah `artisan payments:reconcile`, yang tidak butuh `proc_open`.
+
+### 11.4 Memeriksa hasil rilis
+
+CDN Hostinger menyimpan cache, termasuk halaman error. Kode status dari luar bisa basi, jadi periksa server asal dari dalam server:
+
+```bash
+curl -sk -o /dev/null -w 'asal=%{http_code}\n' --resolve <domain>:443:127.0.0.1 https://<domain>/
+curl -s  -o /dev/null -w 'cdn=%{http_code}\n'  https://<domain>/
+curl -sk -o /dev/null -w 'notifikasi=%{http_code}\n' -X POST --resolve <domain>:443:127.0.0.1 https://<domain>/payments/nicepay/notification
+tail -n 50 <folder aplikasi>/storage/logs/laravel.log
+```
+
+`asal` dan `cdn` seharusnya `200`. `notifikasi` seharusnya `403`: rutenya hidup dan menolak permintaan tanpa token. Kalau `asal` benar tetapi `cdn` belum, kosongkan cache dari hPanel.
+
+Rujukan Hostinger: [membuat dan menambahkan SSH key](https://www.hostinger.com/support/5634532-how-to-generate-ssh-keys-and-add-them-to-hostinger-dashboard/), [masuk lewat SSH](https://www.hostinger.com/support/10441250-how-to-connect-to-a-hosting-plan-remotely-using-ssh-in-hostinger/), [cron job](https://docs.hostinger.com/websites/cron-jobs), [Laravel di Hostinger](https://www.hostinger.com/support/6152127-how-to-deploy-laravel-8-at-hostinger/).
+
+## 12. Perubahan lain yang ikut dalam rilis ini
+
+Halaman pesanan kini menampilkan logo asli tiap metode pembayaran, di pilihan metode dan di kartu tagihan aktif. Ini berlaku juga saat Nicepay dimatikan.
+
+- Logonya ada di `public/images/payments/` dan ikut di git, jadi sampai di server bersama kodenya. Kalau `public_html` berupa salinan (11.2), salin juga folder `public/images`.
+- Tampilannya memakai kelas CSS baru. Tanpa langkah 5 di bagian 2, logo tampil tetapi susunannya berantakan.
+- Mengganti logo: timpa berkasnya dengan nama yang sama. Menambah metode: taruh berkasnya di folder itu dan isi `logo` di `PaymentMethods::METHODS`. Tes `test_setiap_metode_punya_berkas_logo` gagal bila berkasnya tidak ada.
+- Semua logo berformat SVG kecuali Akulaku, yang berupa PNG selebar 320 piksel.
+
+`phpunit.xml` kini mengunci variabel `NICEPAY_*` untuk tes. Ini tidak berpengaruh ke produksi; gunanya agar tes tidak ikut membaca `.env` komputer yang sedang menyalakan sandbox.
