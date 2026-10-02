@@ -353,7 +353,13 @@ Kesimpulan 13.1 bahwa Paylater tidak bisa diuji di sandbox hanya berlaku untuk `
 | `userIP` untuk IPv6 | Belum diuji. |
 | Apakah Nicepay mengirim ulang notifikasi yang dibalas bukan 200? | Belum diketahui. |
 
-Yang belum diuji di sandbox adalah alur lewat aplikasi kita sendiri dari halaman pesanan sampai pesanan berstatus lunas; itu butuh `NICEPAY_*` terisi di `.env` lokal. Uji di atas memanggil kelas `NicepayClient` dan `NicepayRegistrationPayload` langsung.
+Uji di atas memanggil kelas `NicepayClient` dan `NicepayRegistrationPayload` langsung. Setelah itu satu pembayaran dijalankan lewat aplikasi sendiri, dari halaman pesanan di URL tunnel sampai pesanan berstatus Lunas:
+
+- Pesanan berisi satu produk dan ongkir. Halaman Indodana menampilkan nama produk dan "Biaya Pengiriman" sebagai baris terpisah.
+- Pesanan dilunasi oleh callback (inquiry berstatus `0`) pada detik pelanggan kembali; aktivitasnya mencatat pelaku `Indodana via Nicepay (otomatis)`.
+- Notifikasi tiba dua detik kemudian dan dicatat sebagai duplikat yang diabaikan, karena pesanan sudah lunas.
+
+Yang belum diuji lewat aplikasi di sandbox: pesanan berdiskon, ganti metode dari Indodana lalu membayar tagihan lama, dan membatalkan pesanan yang tagihannya masih terbuka.
 
 ### 13.2 Perubahan dari tinjauan akhir (2 Oktober 2026)
 
