@@ -108,6 +108,23 @@ class NicepayClient
         ]);
     }
 
+    public function paymentUrl(): string
+    {
+        return $this->baseUrl().'/nicepay/direct/v2/payment';
+    }
+
+    public function paymentFormFields(PaymentAttempt $attempt): array
+    {
+        $timeStamp = $this->timestamp();
+
+        return [
+            'timeStamp' => $timeStamp,
+            'tXid' => (string) $attempt->midtrans_transaction_id,
+            'merchantToken' => $this->transactionToken($timeStamp, $attempt->midtrans_order_id, (int) $attempt->gross_amount),
+            'callBackUrl' => route('payments.nicepay.callback'),
+        ];
+    }
+
     private function post(string $path, array $payload): array
     {
         try {

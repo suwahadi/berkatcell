@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Payment\MidtransNotificationController;
 use App\Http\Controllers\Payment\NicepayNotificationController;
+use App\Http\Controllers\Payment\NicepayPaymentController;
 use App\Http\Controllers\Payment\PaymentRedirectController;
 use App\Models\Page;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,12 @@ Route::get('/payments/midtrans/finish', [PaymentRedirectController::class, 'fini
 
 Route::post('/payments/nicepay/notification', NicepayNotificationController::class)
     ->name('payments.nicepay.notification');
+
+Route::get('/payments/nicepay/pay/{order:uuid}', [NicepayPaymentController::class, 'redirect'])
+    ->name('payments.nicepay.pay');
+
+Route::match(['get', 'post'], '/payments/nicepay/callback', [NicepayPaymentController::class, 'callback'])
+    ->name('payments.nicepay.callback');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('dashboard', 'pages::dashboard.index')->name('dashboard');
