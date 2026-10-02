@@ -22,7 +22,7 @@
 - **Tes lama yang tidak boleh diubah:** `MidtransWebhookServiceTest`, `MidtransNotificationControllerTest`, dan `MidtransInvoicePageTest` harus lolos tanpa disentuh di Task 1 sampai Task 8.
 - **Menjalankan tes:** `php artisan test --filter=NamaKelasTes`. Database tes adalah MySQL `jajarwayang_test` (lihat `phpunit.xml`) dan harus sudah ada di Laragon.
 - **Gaya kode:** `declare(strict_types=1);` di setiap file PHP baru, sesuai file yang ada. Jalankan `vendor/bin/pint --dirty` sebelum setiap commit.
-- **Commit:** format `tipe(cakupan): ringkasan`, diakhiri baris `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Bekerja di branch `feat/nicepay-indodana`. Tidak ada push tanpa diminta.
+- **Commit:** format `tipe(cakupan): ringkasan`, tanpa trailer atribusi apa pun. Bekerja di branch `feat/nicepay-indodana`. Tidak ada push tanpa diminta.
 
 ## Review Focus
 
